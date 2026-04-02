@@ -34,6 +34,11 @@ const api = {
     const path = url.pathname;
     const method = request.method.toUpperCase();
 
+    // --- Health Check ---
+    if (method === 'GET' && path === '/health') {
+      return Response.json({ status: 'ok', repo: 'deckboss-ai', modules: ['formula', 'spreadsheet', 'chart', 'export', 'import', 'conditional-format'] });
+    }
+
     // --- Route: List all sheets ---
     // GET /api/sheets
     if (method === 'GET' && path === '/api/sheets') {
