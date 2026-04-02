@@ -1,67 +1,13 @@
-/**
- * Deckboss Worker — Cloudflare Worker for Deckboss.ai
- * AI spreadsheet where cells can be AI agents.
- */
 import { loadBYOKConfig, callLLM, generateSetupHTML } from './lib/byok.js';
 
-const SYSTEM_PROMPT = `You are Deckboss, an AI spreadsheet assistant. You help users manage data, run AI-powered cells, and automate workflows. You understand spreadsheet formulas and can explain how CLAW, GATE, TWIN, and UI cells work. Be efficient, organized, and powerful.`;
+const indexHTML = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Deckboss.ai — The Spreadsheet Where Cells Are Agents</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:#0d1117;color:#c9d1d9;line-height:1.6}.hero{min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:2rem;background:radial-gradient(ellipse at 50% 0%,#1a2332 0%,#0d1117 70%)}.hero h1{font-size:clamp(2.5rem,6vw,4.5rem);background:linear-gradient(135deg,#58a6ff,#f78166);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:1rem}.hero p{font-size:1.25rem;color:#8b949e;max-width:650px;margin:0 auto 2rem}.cta{display:inline-block;padding:.8rem 2rem;background:linear-gradient(135deg,#58a6ff,#f78166);color:#fff;border:none;border-radius:8px;font-size:1.1rem;cursor:pointer;text-decoration:none}.cta:hover{transform:scale(1.05)}.features{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:2rem;padding:4rem 2rem;max-width:1200px;margin:0 auto}.card{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:2rem}.card:hover{border-color:#58a6ff}.card h3{color:#58a6ff;margin-bottom:.5rem}.card p{color:#8b949e;font-size:.95rem}.cell-types{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;padding:2rem}.cell{padding:.5rem 1rem;background:#161b22;border:1px solid #30363d;border-radius:6px;font-size:.85rem}.gallery{padding:4rem 2rem;text-align:center}.gallery h2{margin-bottom:2rem;color:#58a6ff}.gallery-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.5rem;max-width:1200px;margin:0 auto}.gallery-grid img{width:100%;border-radius:8px;border:1px solid #30363d}.footer{text-align:center;padding:2rem;color:#484f58;border-top:1px solid #21262d;font-size:.85rem}</style></head><body><div class="hero"><div><h1>Deckboss.ai</h1><p>The spreadsheet where cells are AI agents. Your data, your logic, your fleet.</p><a href="/setup" class="cta">Get Started</a><br><br><div class="cell-types"><span class="cell">📊 Standard</span><span class="cell">🦀 Claw</span><span class="cell">⚡ Runtime</span><span class="cell">🎨 UI</span><span class="cell">🪞 Twin</span><span class="cell">🚪 Gate</span></div></div></div><div class="features"><div class="card"><h3>🧮 Formula Engine</h3><p>20+ functions: SUM, IF, VLOOKUP, PMT. Full spreadsheet power.</p></div><div class="card"><h3>📊 Data Visualization</h3><p>10 SVG chart types. Inline rendering.</p></div><div class="card"><h3>🔌 Plugin System</h3><p>Extensible hooks: onCellChange, onSheetLoad, onExport.</p></div><div class="card"><h3>📤 Data I/O</h3><p>CSV, JSON, TSV, Markdown import/export.</p></div><div class="card"><h3>🔄 Engine</h3><p>Cell references, ranges, formulas, dependency tracking.</p></div><div class="card"><h3>🔗 Univer Bridge</h3><p>Sync with Univer. AI + professional grid.</p></div></div><div class="gallery"><h2>The Vision</h2><div class="gallery-grid"><img src="/public/spreadsheet_with_ai_cells.png" alt="AI Cells"><img src="/public/data_visualization_colorful_charts.png" alt="Data Viz"><img src="/public/formula_input_interface.png" alt="Formulas"><img src="/public/cell_types_display.png" alt="Cell Types"><img src="/public/collaborative_editing.png" alt="Collab"><img src="/public/fleet_dashboard_multiple_spreadsheets.png" alt="Fleet"></div></div><div class="footer"><p>Deckboss.ai — Part of the <a href="https://cocapn.ai" style="color:#58a6ff">Cocapn</a> ecosystem.</p></div></body></html>`;
 
-const CHAT_HTML = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Deckboss.ai</title><style>
-*{margin:0;padding:0;box-sizing:border-box}body{font-family:system-ui,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh}
-.header{background:linear-gradient(135deg,#8b5cf6,#4c1d95);padding:2rem;text-align:center}.header h1{font-size:2rem;color:#f5f3ff}.header p{color:#c4b5fd;margin-top:.5rem}
-.container{max-width:900px;margin:0 auto;padding:1rem}.chat{display:flex;flex-direction:column;height:55vh;border:1px solid #1e293b;border-radius:12px;overflow:hidden;background:#0f172a}
-.messages{flex:1;overflow-y:auto;padding:1rem}.msg{margin-bottom:1rem;padding:.75rem 1rem;border-radius:8px;max-width:80%}.msg.user{background:#4c1d95;margin-left:auto;color:#c4b5fd}.msg.ai{background:#1e293b;color:#e2e8f0}
-.input-area{display:flex;padding:1rem;gap:.5rem;border-top:1px solid #1e293b}textarea{flex:1;background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:8px;padding:.75rem;resize:none;font-family:inherit}button{background:#8b5cf6;color:#f5f3ff;border:none;border-radius:8px;padding:.75rem 1.5rem;cursor:pointer;font-weight:600}button:hover{background:#7c3aed}
-.setup-link{text-align:center;margin:1rem}.setup-link a{color:#c4b5fd;text-decoration:none}
-.info{background:#1e293b;border-radius:8px;padding:1rem;margin:1rem 0;color:#94a3b8;font-size:.875rem}
-.info h3{color:#a78bfa;margin-bottom:.5rem}
-</style></head><body><div class="header"><h1>📊 Deckboss.ai</h1><p>AI-powered spreadsheet — cells that think</p></div>
-<div class="container"><div class="info"><h3>Cell Types</h3><b>CLAW</b> = AI agent cell &nbsp; <b>GATE</b> = API connector &nbsp; <b>TWIN</b> = Digital twin &nbsp; <b>UI</b> = Visual component &nbsp; <b>STANDARD</b> = Data/formula</div>
-<div class="chat"><div class="messages" id="msgs"></div><div class="input-area"><textarea id="input" placeholder="Ask about your spreadsheet..." rows="2"></textarea><button onclick="send()">Send</button></div></div>
-<div class="setup-link"><a href="/setup">⚙️ Configure API Key</a></div></div>
-<script>
-const msgs=document.getElementById('msgs');const input=document.getElementById('input');
-function addMsg(role,text){const d=document.createElement('div');d.className='msg '+role;d.textContent=text;msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight}
-async function send(){const text=input.value.trim();if(!text)return;input.value='';addMsg('user',text);
-try{const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:text}]})});
-const reader=r.body.getReader();const dec=new TextDecoder();let ai='';while(true){const{done,value}=await reader.read();if(done)break;ai+=dec.decode(value);msgs.lastChild.remove();addMsg('ai',ai)}}
-catch(e){addMsg('ai','Error: '+e.message)}}
-input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}});
-addMsg('ai','Hi! I\\'m Deckboss 📊. I help you build AI-powered spreadsheets. Ask me about CLAW cells (AI agents), GATE cells (APIs), TWIN cells (digital twins), or anything else!');
-</script></body></html>`;
-
-export default {
-  async fetch(request: Request, env: { MEMORY: KVNamespace }): Promise<Response> {
-    const url = new URL(request.url);
-
-    if (url.pathname === '/' || url.pathname === '') {
-      return new Response(CHAT_HTML, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
-    }
-    if (url.pathname === '/health') {
-      return new Response(JSON.stringify({ status: 'ok', agent: 'Deckboss', version: '1.0.0' }), { headers: { 'Content-Type': 'application/json' } });
-    }
-    if (url.pathname === '/setup') {
-      return new Response(generateSetupHTML('Deckboss', '#8b5cf6'), { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
-    }
-    if (url.pathname === '/api/byok' && request.method === 'GET') {
-      const config = await loadBYOKConfig(request, env.MEMORY);
-      return new Response(JSON.stringify(config), { headers: { 'Content-Type': 'application/json' } });
-    }
-    if (url.pathname === '/api/byok' && request.method === 'POST') {
-      const body = await request.json() as Record<string, string>;
-      await env.MEMORY.put('byok-config', JSON.stringify(body));
-      return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
-    }
-    if (url.pathname === '/api/chat' && request.method === 'POST') {
-      const { messages } = await request.json() as { messages: Array<{ role: string; content: string }> };
-      const config = await loadBYOKConfig(request, env.MEMORY);
-      if (!config) {
-        return new Response(JSON.stringify({ error: 'No BYOK config. Visit /setup.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-      }
-      const allMessages = [{ role: 'system', content: SYSTEM_PROMPT }, ...messages];
-      const stream = await callLLM(config, allMessages, { stream: true }) as ReadableStream;
-      return new Response(stream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' } });
-    }
-    return new Response('Not found', { status: 404 });
-  }
-};
+export default { async fetch(request: Request, env: any) {
+  const url = new URL(request.url);
+  if (url.pathname === '/health') return new Response(JSON.stringify({ status: 'ok', repo: 'deckboss-ai' }), { headers: { 'Content-Type': 'application/json' } });
+  if (url.pathname === '/setup') return new Response(generateSetupHTML('Deckboss', '#58a6ff'), { headers: { 'Content-Type': 'text/html' } });
+  if (url.pathname === '/api/byok') { if (request.method === 'POST') { const d = await request.json(); env.DECKBOSS_KV?.put('byok-config', JSON.stringify(d)); return new Response(JSON.stringify({ ok: true })); } const c = await env.DECKBOSS_KV?.get('byok-config'); return new Response(c || '{}', { headers: { 'Content-Type': 'application/json' } }); }
+  if (url.pathname === '/api/chat') { const config = await loadBYOKConfig(request, env); if (!config) return new Response(JSON.stringify({ error: 'No LLM configured' }), { status: 400, headers: { 'Content-Type': 'application/json' } }); const body = await request.json(); const r = await callLLM(config, body.messages || [], { system: 'You are Deckboss, an AI-powered spreadsheet assistant.' }); return new Response(JSON.stringify(r), { headers: { 'Content-Type': 'application/json' } }); }
+  if (url.pathname.startsWith('/public/')) { const kv = await env.DECKBOSS_KV?.get('public:' + url.pathname, 'arrayBuffer'); if (kv) return new Response(kv, { headers: { 'Content-Type': url.pathname.endsWith('.png') ? 'image/png' : 'image/jpeg' } }); }
+  return new Response(indexHTML, { headers: { 'Content-Type': 'text/html' } });
+}};
