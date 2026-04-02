@@ -1,13 +1,139 @@
+// deckboss-ai/src/worker.ts
+
+import { FormulaEngine } from './core/formula-engine';
+import { CellRuntime } from './core/cell-runtime';
+import { CellProtocol } from './core/cell-protocol';
+import { SpreadsheetEngine } from './core/spreadsheet-engine';
+import { DataIO } from './core/data-io';
+import { DataViz } from './core/data-viz';
+import { ChartRenderer } from './core/chart-renderer';
+import { ConditionalFormat } from './core/conditional-format';
+import { PluginSystem } from './core/plugin-system';
+import { UniverBridge } from './core/univer-bridge';
+import { DependencyResolver } from './core/dependency-resolver';
 import { loadBYOKConfig, callLLM, generateSetupHTML } from './lib/byok.js';
 
-const indexHTML = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Deckboss.ai — The Spreadsheet Where Cells Are Agents</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:#0d1117;color:#c9d1d9;line-height:1.6}.hero{min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:2rem;background:radial-gradient(ellipse at 50% 0%,#1a2332 0%,#0d1117 70%)}.hero h1{font-size:clamp(2.5rem,6vw,4.5rem);background:linear-gradient(135deg,#58a6ff,#f78166);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:1rem}.hero p{font-size:1.25rem;color:#8b949e;max-width:650px;margin:0 auto 2rem}.cta{display:inline-block;padding:.8rem 2rem;background:linear-gradient(135deg,#58a6ff,#f78166);color:#fff;border:none;border-radius:8px;font-size:1.1rem;cursor:pointer;text-decoration:none}.cta:hover{transform:scale(1.05)}.features{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:2rem;padding:4rem 2rem;max-width:1200px;margin:0 auto}.card{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:2rem}.card:hover{border-color:#58a6ff}.card h3{color:#58a6ff;margin-bottom:.5rem}.card p{color:#8b949e;font-size:.95rem}.cell-types{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;padding:2rem}.cell{padding:.5rem 1rem;background:#161b22;border:1px solid #30363d;border-radius:6px;font-size:.85rem}.gallery{padding:4rem 2rem;text-align:center}.gallery h2{margin-bottom:2rem;color:#58a6ff}.gallery-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.5rem;max-width:1200px;margin:0 auto}.gallery-grid img{width:100%;border-radius:8px;border:1px solid #30363d}.footer{text-align:center;padding:2rem;color:#484f58;border-top:1px solid #21262d;font-size:.85rem}</style></head><body><div class="hero"><div><h1>Deckboss.ai</h1><p>The spreadsheet where cells are AI agents. Your data, your logic, your fleet.</p><a href="/setup" class="cta">Get Started</a><br><br><div class="cell-types"><span class="cell">📊 Standard</span><span class="cell">🦀 Claw</span><span class="cell">⚡ Runtime</span><span class="cell">🎨 UI</span><span class="cell">🪞 Twin</span><span class="cell">🚪 Gate</span></div></div></div><div class="features"><div class="card"><h3>🧮 Formula Engine</h3><p>20+ functions: SUM, IF, VLOOKUP, PMT. Full spreadsheet power.</p></div><div class="card"><h3>📊 Data Visualization</h3><p>10 SVG chart types. Inline rendering.</p></div><div class="card"><h3>🔌 Plugin System</h3><p>Extensible hooks: onCellChange, onSheetLoad, onExport.</p></div><div class="card"><h3>📤 Data I/O</h3><p>CSV, JSON, TSV, Markdown import/export.</p></div><div class="card"><h3>🔄 Engine</h3><p>Cell references, ranges, formulas, dependency tracking.</p></div><div class="card"><h3>🔗 Univer Bridge</h3><p>Sync with Univer. AI + professional grid.</p></div></div><div class="gallery"><h2>The Vision</h2><div class="gallery-grid"><img src="/public/spreadsheet_with_ai_cells.png" alt="AI Cells"><img src="/public/data_visualization_colorful_charts.png" alt="Data Viz"><img src="/public/formula_input_interface.png" alt="Formulas"><img src="/public/cell_types_display.png" alt="Cell Types"><img src="/public/collaborative_editing.png" alt="Collab"><img src="/public/fleet_dashboard_multiple_spreadsheets.png" alt="Fleet"></div></div><div class="footer"><p>Deckboss.ai — Part of the <a href="https://cocapn.ai" style="color:#58a6ff">Cocapn</a> ecosystem.</p></div></body></html>`;
+// Top-level Engine Instantiation
+const formulaEngine = new FormulaEngine();
+const dependencyResolver = new DependencyResolver();
+const cellRuntime = new CellRuntime(formulaEngine, dependencyResolver);
+const cellProtocol = new CellProtocol(cellRuntime);
+const spreadsheetEngine = new SpreadsheetEngine(cellProtocol);
+const dataIO = new DataIO();
+const dataViz = new DataViz();
+const chartRenderer = new ChartRenderer(dataViz);
+const conditionalFormat = new ConditionalFormat();
+const pluginSystem = new PluginSystem();
+const univerBridge = new UniverBridge(spreadsheetEngine);
+// collaboration and validation modules pending
 
-export default { async fetch(request: Request, env: any) {
-  const url = new URL(request.url);
-  if (url.pathname === '/health') return new Response(JSON.stringify({ status: 'ok', repo: 'deckboss-ai' }), { headers: { 'Content-Type': 'application/json' } });
-  if (url.pathname === '/setup') return new Response(generateSetupHTML('Deckboss', '#58a6ff'), { headers: { 'Content-Type': 'text/html' } });
-  if (url.pathname === '/api/byok') { if (request.method === 'POST') { const d = await request.json(); env.DECKBOSS_KV?.put('byok-config', JSON.stringify(d)); return new Response(JSON.stringify({ ok: true })); } const c = await env.DECKBOSS_KV?.get('byok-config'); return new Response(c || '{}', { headers: { 'Content-Type': 'application/json' } }); }
-  if (url.pathname === '/api/chat') { const config = await loadBYOKConfig(request, env); if (!config) return new Response(JSON.stringify({ error: 'No LLM configured' }), { status: 400, headers: { 'Content-Type': 'application/json' } }); const body = await request.json(); const r = await callLLM(config, body.messages || [], { system: 'You are Deckboss, an AI-powered spreadsheet assistant.' }); return new Response(JSON.stringify(r), { headers: { 'Content-Type': 'application/json' } }); }
-  if (url.pathname.startsWith('/public/')) { const kv = await env.DECKBOSS_KV?.get('public:' + url.pathname, 'arrayBuffer'); if (kv) return new Response(kv, { headers: { 'Content-Type': url.pathname.endsWith('.png') ? 'image/png' : 'image/jpeg' } }); }
-  return new Response(indexHTML, { headers: { 'Content-Type': 'text/html' } });
-}};
+// Hono/Itty Router compatible API handler
+const api = {
+  async fetch(request: Request): Promise<Response> {
+    const url = new URL(request.url);
+    const path = url.pathname;
+    const method = request.method.toUpperCase();
+
+    // --- Route: List all sheets ---
+    // GET /api/sheets
+    if (method === 'GET' && path === '/api/sheets') {
+      const sheets = spreadsheetEngine.getAllSheets();
+      return Response.json({ success: true, data: sheets });
+    }
+
+    // --- Route: Create sheet ---
+    // POST /api/sheets
+    if (method === 'POST' && path === '/api/sheets') {
+      const body = await request.json() as { name?: string, data?: any };
+      const sheet = spreadsheetEngine.createSheet(body.name, body.data);
+      return Response.json({ success: true, data: sheet });
+    }
+
+    // --- Route: Evaluate formula ---
+    // POST /api/sheets/:id/formula
+    let match = path.match(/^\/api\/sheets\/([^/]+)\/formula$/);
+    if (method === 'POST' && match) {
+      const sheetId = match[1];
+      const { formula } = await request.json() as { formula: string };
+      const result = formulaEngine.evaluate(formula);
+      return Response.json({ success: true, data: { result } });
+    }
+
+    // --- Route: Generate chart config ---
+    // POST /api/sheets/:id/chart
+    match = path.match(/^\/api\/sheets\/([^/]+)\/chart$/);
+    if (method === 'POST' && match) {
+      const sheetId = match[1];
+      const config = await request.json() as any;
+      const chartConfig = chartRenderer.generateConfig(sheetId, config);
+      return Response.json({ success: true, data: chartConfig });
+    }
+
+    // --- Route: Validate data ---
+    // GET /api/sheets/:id/validation
+    match = path.match(/^\/api\/sheets\/([^/]+)\/validation$/);
+    if (method === 'GET' && match) {
+      const sheetId = match[1];
+      const result = dataValidation.validate(sheetId);
+      return Response.json({ success: true, data: result });
+    }
+
+    // --- Route: Apply conditional formatting ---
+    // POST /api/sheets/:id/conditional
+    match = path.match(/^\/api\/sheets\/([^/]+)\/conditional$/);
+    if (method === 'POST' && match) {
+      const sheetId = match[1];
+      const rules = await request.json() as any[];
+      const result = conditionalFormat.apply(sheetId, rules);
+      return Response.json({ success: true, data: result });
+    }
+
+    // --- Route: Export data ---
+    // GET /api/sheets/:id/export?format=csv|json|tsv|md
+    match = path.match(/^\/api\/sheets\/([^/]+)\/export$/);
+    if (method === 'GET' && match) {
+      const sheetId = match[1];
+      const format = url.searchParams.get('format') || 'json';
+      const sheetData = spreadsheetEngine.getSheetData(sheetId);
+      const exported = dataIO.exportData(sheetData, format);
+      return Response.json({ success: true, data: exported });
+    }
+
+    // --- Route: Import data ---
+    // POST /api/import
+    match = path.match(/^\/api\/import$/);
+    if (method === 'POST' && match) {
+      const { data, format, sheetName } = await request.json() as { data: string, format: 'csv' | 'json' | 'tsv' | 'md', sheetName?: string };
+      const parsed = dataIO.importData(data, format);
+      const sheet = spreadsheetEngine.createSheet(sheetName || 'Imported', parsed);
+      return Response.json({ success: true, data: sheet });
+    }
+
+    // --- Route: Get/Update specific sheet ---
+    // GET /api/sheets/:id
+    // PUT /api/sheets/:id
+    match = path.match(/^\/api\/sheets\/([^/]+)$/);
+    if (match) {
+      const sheetId = match[1];
+
+      if (method === 'GET') {
+        const sheet = spreadsheetEngine.getSheet(sheetId);
+        if (!sheet) {
+          return Response.json({ success: false, error: 'Sheet not found' }, { status: 404 });
+        }
+        return Response.json({ success: true, data: sheet });
+      }
+
+      if (method === 'PUT') {
+        const updates = await request.json() as any;
+        const updatedSheet = spreadsheetEngine.updateCells(sheetId, updates);
+        return Response.json({ success: true, data: updatedSheet });
+      }
+    }
+
+    // Fallback for unhandled routes
+    return Response.json({ success: false, error: 'API endpoint not found' }, { status: 404 });
+  }
+};
+
+export default api;
