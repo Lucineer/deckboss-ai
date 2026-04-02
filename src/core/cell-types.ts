@@ -146,3 +146,8 @@ const UI_COLOR: CellTypeDefinition = {
     category: 'ui',
     render: (value: string) => `<input type="color" class="cell-ui-color" value="${escapeHtml(value)}">`,
     parse: (input: string) => input,
+
+};
+
+export const CELL_TYPES: CellTypeDefinition[] = [STANDARD, CLAW, RUNTIME, UI_BUTTON, UI_SLIDER, UI_DROPDOWN, UI_TOGGLE, UI_COLOR];
+

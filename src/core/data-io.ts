@@ -15,3 +15,5 @@ export class DataIO {
   autoImport(content: string): ImportResult { const fmt = this.detectFormat(content); if (fmt === 'csv') return this.importCSV(content); if (fmt === 'json') return this.importJSON(content); if (fmt === 'tsv') return this.importTSV(content); if (fmt === 'markdown') return this.importMarkdown(content); return { rows:0, cols:0, errors:['Unknown format'], duration:0 }; }
   private loadToEngine(rows: any[][]): void { const e = this.getEngine(); if (!e) return; rows.forEach((r, ri) => r.forEach((c, ci) => { try { e.setCell?.(ri, ci, c); } catch {} })); }
 }
+
+

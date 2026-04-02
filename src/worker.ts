@@ -28,6 +28,12 @@ const univerBridge = new UniverBridge(spreadsheetEngine);
 // collaboration and validation modules pending
 
 // Hono/Itty Router compatible API handler
+const CSP_HEADER = { 'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://api.openai.com https://api.anthropic.com https://generativelanguage.googleapis.com https://api.deepseek.com https://api.groq.com https://api.mistral.ai https://openrouter.ai https://api.z.ai https://*;" };
+
+function jsonRes(data: any, init?: ResponseInit): Response {
+  return new Response(JSON.stringify(data), { ...init, headers: { 'Content-Type': 'application/json', ...CSP_HEADER, ...(init?.headers || {}) } });
+}
+
 const api = {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
@@ -36,14 +42,14 @@ const api = {
 
     // --- Health Check ---
     if (method === 'GET' && path === '/health') {
-      return Response.json({ status: 'ok', repo: 'deckboss-ai', modules: ['formula', 'spreadsheet', 'chart', 'export', 'import', 'conditional-format'] });
+      return jsonRes({ status: 'ok', repo: 'deckboss-ai', modules: ['formula', 'spreadsheet', 'chart', 'export', 'import', 'conditional-format'] });
     }
 
     // --- Route: List all sheets ---
     // GET /api/sheets
     if (method === 'GET' && path === '/api/sheets') {
       const sheets = spreadsheetEngine.getAllSheets();
-      return Response.json({ success: true, data: sheets });
+      return jsonRes({ success: true, data: sheets });
     }
 
     // --- Route: Create sheet ---
@@ -51,7 +57,7 @@ const api = {
     if (method === 'POST' && path === '/api/sheets') {
       const body = await request.json() as { name?: string, data?: any };
       const sheet = spreadsheetEngine.createSheet(body.name, body.data);
-      return Response.json({ success: true, data: sheet });
+      return jsonRes({ success: true, data: sheet });
     }
 
     // --- Route: Evaluate formula ---
@@ -61,7 +67,7 @@ const api = {
       const sheetId = match[1];
       const { formula } = await request.json() as { formula: string };
       const result = formulaEngine.evaluate(formula);
-      return Response.json({ success: true, data: { result } });
+      return jsonRes({ success: true, data: { result } });
     }
 
     // --- Route: Generate chart config ---
@@ -71,7 +77,7 @@ const api = {
       const sheetId = match[1];
       const config = await request.json() as any;
       const chartConfig = chartRenderer.generateConfig(sheetId, config);
-      return Response.json({ success: true, data: chartConfig });
+      return jsonRes({ success: true, data: chartConfig });
     }
 
     // --- Route: Validate data ---
@@ -80,7 +86,7 @@ const api = {
     if (method === 'GET' && match) {
       const sheetId = match[1];
       const result = dataValidation.validate(sheetId);
-      return Response.json({ success: true, data: result });
+      return jsonRes({ success: true, data: result });
     }
 
     // --- Route: Apply conditional formatting ---
@@ -90,7 +96,7 @@ const api = {
       const sheetId = match[1];
       const rules = await request.json() as any[];
       const result = conditionalFormat.apply(sheetId, rules);
-      return Response.json({ success: true, data: result });
+      return jsonRes({ success: true, data: result });
     }
 
     // --- Route: Export data ---
@@ -101,7 +107,7 @@ const api = {
       const format = url.searchParams.get('format') || 'json';
       const sheetData = spreadsheetEngine.getSheetData(sheetId);
       const exported = dataIO.exportData(sheetData, format);
-      return Response.json({ success: true, data: exported });
+      return jsonRes({ success: true, data: exported });
     }
 
     // --- Route: Import data ---
@@ -111,7 +117,7 @@ const api = {
       const { data, format, sheetName } = await request.json() as { data: string, format: 'csv' | 'json' | 'tsv' | 'md', sheetName?: string };
       const parsed = dataIO.importData(data, format);
       const sheet = spreadsheetEngine.createSheet(sheetName || 'Imported', parsed);
-      return Response.json({ success: true, data: sheet });
+      return jsonRes({ success: true, data: sheet });
     }
 
     // --- Route: Get/Update specific sheet ---
@@ -124,20 +130,20 @@ const api = {
       if (method === 'GET') {
         const sheet = spreadsheetEngine.getSheet(sheetId);
         if (!sheet) {
-          return Response.json({ success: false, error: 'Sheet not found' }, { status: 404 });
+          return jsonRes({ success: false, error: 'Sheet not found' }, { status: 404 });
         }
-        return Response.json({ success: true, data: sheet });
+        return jsonRes({ success: true, data: sheet });
       }
 
       if (method === 'PUT') {
         const updates = await request.json() as any;
         const updatedSheet = spreadsheetEngine.updateCells(sheetId, updates);
-        return Response.json({ success: true, data: updatedSheet });
+        return jsonRes({ success: true, data: updatedSheet });
       }
     }
 
     // Fallback for unhandled routes
-    return Response.json({ success: false, error: 'API endpoint not found' }, { status: 404 });
+    return jsonRes({ success: false, error: 'API endpoint not found' }, { status: 404 });
   }
 };
 
