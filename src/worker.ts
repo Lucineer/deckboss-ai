@@ -34,11 +34,23 @@ function jsonRes(data: any, init?: ResponseInit): Response {
   return new Response(JSON.stringify(data), { ...init, headers: { 'Content-Type': 'application/json', ...CSP_HEADER, ...(init?.headers || {}) } });
 }
 
+function landing(): string {
+  return `<!DOCTYPE html><html><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>Deckboss.ai — The AI Spreadsheet Agent</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:system-ui;background:#0a0a1a;color:#e0e0e0}.hero{background:linear-gradient(135deg,#f59e0b,#ef4444);padding:4rem 2rem;text-align:center}.hero h1{font-size:3rem;background:linear-gradient(90deg,#fbbf24,#ef4444);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:1rem}.hero p{color:#94a3b8;font-size:1.1rem;max-width:600px;margin:0 auto}.footer{text-align:center;padding:2rem;color:#334;font-size:.8rem;border-top:1px solid #111}</style></head><body>
+<div class="hero"><h1>Deckboss.ai</h1><p>The AI Spreadsheet Agent — formulas, charts, conditional formatting, imports, and exports, all powered by intelligence.</p></div>
+<div class="footer">Deckboss.ai — Part of the Cocapn Ecosystem</div>
+</body></html>`;
+}
+
 const api = {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
     const path = url.pathname;
     const method = request.method.toUpperCase();
+
+    if (path === '/') return new Response(landing(), { headers: { 'Content-Type': 'text/html;charset=utf-8' } });
 
     // --- Health Check ---
     if (method === 'GET' && path === '/health') {
@@ -143,7 +155,7 @@ const api = {
     }
 
     // Fallback for unhandled routes
-    return jsonRes({ success: false, error: 'API endpoint not found' }, { status: 404 });
+    return new Response(landing(), { headers: { 'Content-Type': 'text/html;charset=utf-8' } });
   }
 };
 
