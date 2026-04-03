@@ -67,6 +67,9 @@ const api = {
     }
 
     // --- Phase 1B: Confidence tracking ---
+    if (method === 'GET' && path === '/api/evaporation') { return jsonRes({ hot: [], warm: [], coverage: 0, repo: 'deckboss-ai', timestamp: Date.now() }); }
+    if (method === 'GET' && path === '/api/kg') { return jsonRes({ nodes: [], edges: [], domain: 'deckboss-ai', timestamp: Date.now() }); }
+    if (method === 'GET' && path === '/api/memory') { return jsonRes({ patterns: [], repo: 'deckboss-ai', timestamp: Date.now() }); }
     if (path === '/api/confidence') {
       const tracker = getTracker();
       if (method === 'GET') return jsonRes(tracker.getAll());
