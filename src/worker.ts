@@ -1,3 +1,4 @@
+import { softActualize, confidenceScore } from './lib/soft-actualize.js';
 // deckboss-ai/src/worker.ts
 
 import { FormulaEngine } from './core/formula-engine';
@@ -54,7 +55,15 @@ const api = {
 
     // --- Health Check ---
     if (method === 'GET' && path === '/health') {
-      return jsonRes({ status: 'ok', repo: 'deckboss-ai', modules: ['formula', 'spreadsheet', 'chart', 'export', 'import', 'conditional-format'] });
+      return jsonRes({ status: 'ok', repo: 'deckboss-ai', version: '1.1.0', agentCount: 1, modules: ['formula','spreadsheet','chart','export','import','conditional-format','seed'], seedVersion: '2024.04', timestamp: Date.now() });
+    }
+
+    // --- Seed Route ---
+    if (method === 'GET' && path === '/api/seed') {
+      return jsonRes({ domain: 'deckboss-ai', description: 'AI spreadsheet agent — formulas, charts, data analysis', seedVersion: '2024.04',
+        formulas: ['SUM','AVERAGE','COUNT','VLOOKUP','INDEX/MATCH','IF/IFS','SUMIF','COUNTIF','PivotTable basics'],
+        cellTypes: ['string','number','boolean','formula','date','currency','percentage'],
+        systemPrompt: 'You are Deckboss, an AI spreadsheet agent. Help with formulas, data analysis, and visualization.' });
     }
 
     // --- Route: List all sheets ---
