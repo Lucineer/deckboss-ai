@@ -16,6 +16,7 @@ import { PluginSystem } from './core/plugin-system';
 import { UniverBridge } from './core/univer-bridge';
 import { DependencyResolver } from './core/dependency-resolver';
 import { loadBYOKConfig, callLLM, generateSetupHTML } from './lib/byok.js';
+import { evapPipeline } from './lib/evaporation-pipeline.js';
 import { getTracker } from './lib/confidence-tracker.js';
 import { getRouter } from './lib/model-router.js';
 
@@ -100,13 +101,12 @@ const api = {
 
         const sysContent = `You are Deckboss.ai, a helpful AI spreadsheet agent.\n[Model routing: tier ${decision.tier} — ${decision.reason}]`;
         const messages = [{ role: 'system', content: sysContent }, ...msgs];
-        const resp = await callLLM(apiKey, messages);
+        const result = await evapPipeline(env, lastMsg, () => callLLM(apiKey, messages), 'deckboss-ai');
 
         tracker.record(topic, true);
         await (env as any).MEMORY?.put?.('confidence-state', tracker.serialize());
-        await recordMiss((env as any).MEMORY);
 
-        return jsonRes({ response: resp, _tier: decision.tier, _topic: topic, _confidence: conf.score });
+        return jsonRes({ response: result.response, source: result.source, tokensUsed: result.tokensUsed, _tier: decision.tier, _topic: topic, _confidence: conf.score });
       } catch (e: any) { return jsonRes({ error: e.message }, { status: 500 }); }
     }
 
