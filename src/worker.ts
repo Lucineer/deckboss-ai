@@ -1,4 +1,6 @@
 import { softActualize, confidenceScore } from './lib/soft-actualize.js';
+import { deadbandCheck, deadbandStore } from './lib/deadband.js';
+import { loadStats, recordHit, recordMiss } from './lib/response-logger.js';
 // deckboss-ai/src/worker.ts
 
 import { FormulaEngine } from './core/formula-engine';
@@ -13,6 +15,8 @@ import { PluginSystem } from './core/plugin-system';
 import { UniverBridge } from './core/univer-bridge';
 import { DependencyResolver } from './core/dependency-resolver';
 import { loadBYOKConfig, callLLM, generateSetupHTML } from './lib/byok.js';
+import { getTracker } from './lib/confidence-tracker.js';
+import { getRouter } from './lib/model-router.js';
 
 // Top-level Engine Instantiation
 const formulaEngine = new FormulaEngine();
@@ -58,14 +62,50 @@ const api = {
       return new Response(generateSetupHTML('deckboss-ai'), { headers: { 'Content-Type': 'text/html;charset=utf-8', ...CSP_HEADER } });
     }
 
+    // --- Phase 1B: Confidence tracking ---
+    if (path === '/api/confidence') {
+      const tracker = getTracker();
+      if (method === 'GET') return jsonRes(tracker.getAll());
+      if (method === 'POST') {
+        const { topic, success } = await request.json();
+        tracker.record(topic, typeof success === 'boolean' ? success : true);
+        await (env as any).MEMORY?.put?.('confidence-state', tracker.serialize());
+        return jsonRes(tracker.get(topic));
+      }
+    }
+
+    if (method === 'GET' && path === '/api/efficiency') { return jsonRes(await loadStats((env as any).MEMORY)); }
+
     if (method === 'POST' && path === '/api/chat') {
       try {
         const body = await request.json();
         const apiKey = (env as any)?.OPENAI_API_KEY || (env as any)?.ANTHROPIC_API_KEY || (env as any)?.GEMINI_API_KEY;
         if (!apiKey) return jsonRes({ error: 'No API key configured. Visit /setup to configure.' }, { status: 503 });
-        const messages = [{ role: 'system', content: 'You are Deckboss.ai, a helpful AI spreadsheet agent.' }, ...(body.messages || [{ role: 'user', content: body.message || '' }])];
+
+
+        const cached = await deadbandCheck((env as any).MEMORY, lastMsg, 'deckboss');
+        if (cached) { await recordHit((env as any).MEMORY); return jsonRes({ response: cached.response, fromCache: true }); }
+
+        const tracker = getTracker();
+        const router = getRouter();
+        const saved = await (env as any).MEMORY?.get?.('confidence-state');
+        if (saved) tracker.deserialize(saved);
+
+        const msgs = body.messages || [{ role: 'user', content: body.message || '' }];
+        const lastMsg = msgs.filter((m: any) => m.role === 'user').pop()?.content ?? '';
+        const topic = tracker.classify(lastMsg);
+        const conf = tracker.get(topic);
+        const decision = router.route(topic, conf.score, conf.count);
+
+        const sysContent = `You are Deckboss.ai, a helpful AI spreadsheet agent.\n[Model routing: tier ${decision.tier} — ${decision.reason}]`;
+        const messages = [{ role: 'system', content: sysContent }, ...msgs];
         const resp = await callLLM(apiKey, messages);
-        return jsonRes({ response: resp });
+
+        tracker.record(topic, true);
+        await (env as any).MEMORY?.put?.('confidence-state', tracker.serialize());
+        await recordMiss((env as any).MEMORY);
+
+        return jsonRes({ response: resp, _tier: decision.tier, _topic: topic, _confidence: conf.score });
       } catch (e: any) { return jsonRes({ error: e.message }, { status: 500 }); }
     }
 
