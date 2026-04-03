@@ -51,7 +51,26 @@ const api = {
     const path = url.pathname;
     const method = request.method.toUpperCase();
 
+    if (method === 'OPTIONS') {
+      return new Response(null, { headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type,Authorization' } });
+    }
+
     if (path === '/') return new Response(landing(), { headers: { 'Content-Type': 'text/html;charset=utf-8' } });
+
+    if (method === 'GET' && path === '/setup') {
+      return new Response(generateSetupHTML('deckboss-ai'), { headers: { 'Content-Type': 'text/html;charset=utf-8', ...CSP_HEADER } });
+    }
+
+    if (method === 'POST' && path === '/api/chat') {
+      try {
+        const body = await request.json();
+        const apiKey = (env as any)?.OPENAI_API_KEY || (env as any)?.ANTHROPIC_API_KEY || (env as any)?.GEMINI_API_KEY;
+        if (!apiKey) return jsonRes({ error: 'No API key configured. Visit /setup to configure.' }, { status: 503 });
+        const messages = [{ role: 'system', content: 'You are Deckboss.ai, a helpful AI spreadsheet agent.' }, ...(body.messages || [{ role: 'user', content: body.message || '' }])];
+        const resp = await callLLM(apiKey, messages);
+        return jsonRes({ response: resp });
+      } catch (e: any) { return jsonRes({ error: e.message }, { status: 500 }); }
+    }
 
     // --- Health Check ---
     if (method === 'GET' && path === '/health') {
@@ -163,8 +182,7 @@ const api = {
       }
     }
 
-    // Fallback for unhandled routes
-    return new Response(landing(), { headers: { 'Content-Type': 'text/html;charset=utf-8' } });
+    return new Response('{"error":"Not Found"}', { status: 404, headers: { 'Content-Type': 'application/json' } });
   }
 };
 
