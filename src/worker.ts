@@ -121,6 +121,7 @@ const api = {
     if (method === 'GET' && path === '/health') {
       return jsonRes({ status: 'ok', repo: 'deckboss-ai', version: '1.1.0', agentCount: 1, modules: ['formula','spreadsheet','chart','export','import','conditional-format','seed'], seedVersion: '2024.04', timestamp: Date.now() });
     }
+    if (path === '/vessel.json') { try { const vj = await import('./vessel.json', { with: { type: 'json' } }); return jsonRes(vj.default || vj); } catch { return jsonRes({}); } }
 
     // --- Seed Route ---
     if (method === 'GET' && path === '/api/seed') {
