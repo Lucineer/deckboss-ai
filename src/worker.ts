@@ -1,4 +1,4 @@
-// Deckboss.ai v2 — Hub-and-Spoke Fleet Command Center
+// Deckboss.ai v2 — Hub-and-Spoke Your Agent\'s Nervous System
 // Spreadsheet view + flowchart view + real-time agent interactions
 // The repo IS the agent. Every vessel is a node. The chatbot is the hub.
 
@@ -8,14 +8,59 @@ interface Env {
 }
 
 const DS = 'https://api.deepseek.com/chat/completions';
+
+const TYPE_COLORS: Record<string,string> = {
+  hub:'#f78166',agent:'#00d4ff',app:'#818cf8',meta:'#22c55e',infra:'#00E6D6',storage:'#64748b',
+  model:'#58a6ff',sensor:'#4ade80',terminal:'#f59e0b',database:'#a78bfa',inbox:'#f472b6'
+};
 const CSP_OBJ = {'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://api.deepseek.com https://raw.githubusercontent.com https://*;"};
 
 function json(data: any, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', ...CSP_OBJ } });
 }
 
-// ── Fleet nodes (known vessels) ──
-const HUB_NODES = [
+// ── Default fleet configuration ──
+const DEFAULT_NODES = [
+  {id:'hub',label:'Your Agent',type:'hub',color:'#f78166',icon:'🗣',desc:'Your primary conversational agent (STT/Text → reason → TTS)',priority:10},
+  {id:'studylog',label:'StudyLog',type:'agent',color:'#00d4ff',icon:'📚',desc:'AI classroom with repo-agent tutoring',priority:7},
+  {id:'dmlog',label:'DMLog',type:'agent',color:'#c9a23c',icon:'🐉',desc:'AI Dungeon Master with multi-model narration',priority:8},
+  {id:'makerlog',label:'MakerLog',type:'agent',color:'#7b2ff7',icon:'🔧',desc:'Coding agent with self-building pipeline',priority:9},
+  {id:'personallog',label:'PersonalLog',type:'agent',color:'#6366f1',icon:'📝',desc:'Personal journaling companion',priority:5},
+  {id:'businesslog',label:'BusinessLog',type:'agent',color:'#3b82f6',icon:'💼',desc:'Business CRM and meeting simulator',priority:5},
+  {id:'fishinglog',label:'FishingLog',type:'agent',color:'#4ade80',icon:'🎣',desc:'Fishing companion and species tracker',priority:6},
+  {id:'cooklog',label:'CookLog',type:'agent',color:'#f97316',icon:'🍳',desc:'Cooking assistant and recipe manager',priority:4},
+  {id:'booklog',label:'BookLog',type:'agent',color:'#a78bfa',icon:'📖',desc:'Reading tracker and book recommender',priority:4},
+  {id:'fleet-rpg',label:'Fleet RPG',type:'app',color:'#ef4444',icon:'⚔️',desc:'Stats-as-compute role playing game',priority:6},
+  {id:'dogmind',label:'DogMind',type:'app',color:'#d69e2e',icon:'🐕',desc:'Dog training arena with DNA system',priority:5},
+  {id:'luciddreamer',label:'LucidDreamer',type:'app',color:'#818cf8',icon:'💭',desc:'Overnight content engine',priority:5},
+  {id:'capitaine',label:'Capitaine',type:'meta',color:'#00E6D6',icon:'🗼',desc:'Fleet flagship and HN release',priority:8},
+  {id:'git-agent',label:'Git-Agent',type:'meta',color:'#22c55e',icon:'🐙',desc:'Autonomous git-agent with TUI',priority:7},
+  {id:'fleet-orch',label:'Orchestrator',type:'infra',color:'#00E6D6',icon:'📊',desc:'Fleet event bus and coordination',priority:7},
+  {id:'the-fleet',label:'The Fleet',type:'infra',color:'#58a6ff',icon:'⚓',desc:'Fleet gateway and release vehicle',priority:9},
+  {id:'fleet-kv',label:'Fleet Memory',type:'storage',color:'#64748b',icon:'💾',desc:'KV storage for fleet state',priority:6},
+  {id:'cloud-model',label:'Cloud Model',type:'model',color:'#58a6ff',icon:'☁️',desc:'Cloud reasoning API (intermittent)',priority:7},
+  {id:'local-model',label:'Local Model',type:'model',color:'#38bdf8',icon:'💻',desc:'Fast local model on Jetson',priority:8},
+  {id:'image-gen',label:'Image Gen',type:'model',color:'#f472b6',icon:'🎨',desc:'Image generation model',priority:4},
+];
+
+const DEFAULT_EDGES = [
+  ['hub','studylog','task dispatch'],['hub','dmlog','game commands'],['hub','makerlog','code requests'],
+  ['hub','personallog','journal entries'],['hub','businesslog','meeting data'],['hub','fishinglog','species data'],
+  ['hub','cooklog','recipes'],['hub','booklog','reading log'],['hub','fleet-rpg','game state'],
+  ['hub','dogmind','training data'],['hub','luciddreamer','content briefs'],['hub','capitaine','fleet orders'],
+  ['hub','git-agent','task queue'],['hub','fleet-orch','event emit'],['hub','the-fleet','deployment'],
+  ['hub','cloud-model','reasoning request'],['hub','local-model','fast inference'],['hub','image-gen','gen request'],
+  ['cloud-model','hub','reasoning response'],['local-model','hub','quick answer'],['image-gen','hub','generated image'],
+  ['dmlog','fleet-kv','session save'],['studylog','fleet-kv','progress save'],['makerlog','fleet-kv','code save'],
+  ['git-agent','fleet-orch','commit event'],['capitaine','the-fleet','sync'],['fleet-orch','fleet-kv','state persist'],
+  ['local-model','cloud-model','overflow request'],['cloud-model','local-model','fallback response'],
+];
+
+// Runtime nodes/edges (loaded from KV or defaults)
+let HUB_NODES = [...DEFAULT_NODES];
+let HUB_EDGES = [...DEFAULT_EDGES];
+// Keep old reference for backward compat:
+const _ORIGINAL_NODES = [
   { id: 'hub', label: 'Deckboss', type: 'hub', color: '#f78166', icon: '⚓', desc: 'Central command — routes messages, orchestrates fleet' },
   { id: 'studylog', label: 'StudyLog', type: 'agent', color: '#F59E0B', icon: '📚', desc: 'AI classroom with crystal graph memory', url: 'https://studylog-ai.casey-digennaro.workers.dev' },
   { id: 'dmlog', label: 'DMLog', type: 'agent', color: '#c9a23c', icon: '🎲', desc: 'AI Dungeon Master — TTRPG with 9-model router', url: 'https://dmlog-ai.casey-digennaro.workers.dev' },
@@ -36,7 +81,8 @@ const HUB_NODES = [
 ];
 
 // Edges: connections between nodes [from, to, label?]
-const HUB_EDGES: (string | undefined)[][] = [
+// Old edges reference replaced by DEFAULT_EDGES above
+const _OLD_EDGES = [
   ['hub','studylog','task dispatch'],['hub','dmlog','game commands'],['hub','makerlog','build orders'],['hub','personallog','user queries'],['hub','businesslog','crm data'],['hub','fishinglog','trip logs'],
   ['studylog','kv-store','memory writes'],['dmlog','kv-store','campaign data'],['makerlog','kv-store','code state'],['personallog','kv-store','user memory'],['businesslog','kv-store','contacts'],['fishinglog','kv-store','catch data'],
   ['hub','fleet-rpg','encounter triggers'],['hub','dogmind','training cmds'],['hub','the-seed','evolution reqs'],['hub','become','onboarding data'],['hub','self-evolve','mutation config'],
@@ -112,7 +158,7 @@ const WORKFLOW_TEMPLATES = [
 
 // ── Landing HTML with Hub-and-Spoke Canvas ──
 function landing(): string {
-  return '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Deckboss.ai — Fleet Command Center</title>' +
+  return '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Deckboss.ai — Your Agent\'s Nervous System</title>' +
   '<style>' +
   '*{margin:0;padding:0;box-sizing:border-box}body{font-family:system-ui,-apple-system,sans-serif;background:#0a0a0f;color:#e0e0e0;overflow:hidden;height:100vh}' +
   '#canvas{position:absolute;top:0;left:0;width:100%;height:100%;cursor:grab}#canvas.dragging{cursor:grabbing}' +
@@ -309,7 +355,7 @@ export default {
     }
 
     if (path === '/') return new Response(landing(), { headers: { 'Content-Type': 'text/html;charset=utf-8', ...CSP_OBJ } });
-    if (path === '/health') return json({ status: 'ok', repo: 'deckboss-ai', version: '2.0.0', nodes: HUB_NODES.length, edges: HUB_EDGES.length, timestamp: Date.now() });
+    if (path === '/health') return json({ status: 'ok', repo: 'deckboss-ai', version: '2.0.0', nodes: HUB_NODES.length, edges: HUB_EDGES.length, types: [...new Set(HUB_NODES.map((n: any) => n.type))], timestamp: Date.now() });
     if (path === '/vessel.json') return json({ name: 'deckboss-ai', displayName: 'Deckboss', type: 'cocapn-vessel', category: 'infrastructure', description: 'Hub-and-spoke fleet command center with flowchart and spreadsheet views', capabilities: ['fleet-visualization', 'hub-spoke-flowchart', 'spreadsheet-view', 'topology-view', 'agent-routing', 'io-streams'], endpoints: { health: '/health', chat: '/api/chat', nodes: '/api/nodes', edges: '/api/edges', topology: '/api/topology' }, deployment: { url: 'https://deckboss-ai.casey-digennaro.workers.dev' } });
 
     // Fleet topology API
@@ -483,6 +529,50 @@ export default {
     if (regMatch && method === 'DELETE') {
       await env.DECKBOSS_KV.delete('registered:' + regMatch[1]);
       return json({ ok: true, deleted: regMatch[1] });
+    }
+
+    // Dynamic node/edge management
+    if (path === '/api/nodes' && method === 'GET') {
+      return json({ nodes: HUB_NODES, total: HUB_NODES.length });
+    }
+    if (path === '/api/nodes' && method === 'POST') {
+      const body = await request.json() as { nodes: any[] };
+      if (body.nodes && Array.isArray(body.nodes)) {
+        HUB_NODES = body.nodes;
+        await env.DECKBOSS_KV.put('nodes', JSON.stringify(body.nodes));
+        return json({ ok: true, total: body.nodes.length });
+      }
+      return json({ error: 'Requires {nodes:[...]}' }, 400);
+    }
+    if (path === '/api/edges' && method === 'GET') {
+      return json({ edges: HUB_EDGES, total: HUB_EDGES.length });
+    }
+    if (path === '/api/edges' && method === 'POST') {
+      const body = await request.json() as { edges: any[] };
+      if (body.edges && Array.isArray(body.edges)) {
+        HUB_EDGES = body.edges;
+        await env.DECKBOSS_KV.put('edges', JSON.stringify(body.edges));
+        return json({ ok: true, total: body.edges.length });
+      }
+      return json({ error: 'Requires {edges:[...]}' }, 400);
+    }
+    // Add single node
+    if (path === '/api/node' && method === 'POST') {
+      const body = await request.json() as { id: string; label: string; type: string; color?: string; icon?: string; desc?: string; priority?: number; endpoint?: string };
+      if (!body.id || !body.label) return json({ error: 'Requires {id, label}' }, 400);
+      const node = { id: body.id, label: body.label, type: body.type || 'agent', color: body.color || TYPE_COLORS[body.type] || '#58a6ff', icon: body.icon || '🤖', desc: body.desc || '', priority: body.priority || 5, endpoint: body.endpoint || '' };
+      const existing = HUB_NODES.findIndex(n => n.id === body.id);
+      if (existing >= 0) HUB_NODES[existing] = node; else HUB_NODES.push(node);
+      await env.DECKBOSS_KV.put('nodes', JSON.stringify(HUB_NODES));
+      return json({ ok: true, node });
+    }
+    // Add single edge
+    if (path === '/api/edge' && method === 'POST') {
+      const body = await request.json() as { from: string; to: string; label?: string };
+      if (!body.from || !body.to) return json({ error: 'Requires {from, to}' }, 400);
+      HUB_EDGES.push([body.from, body.to, body.label || '']);
+      await env.DECKBOSS_KV.put('edges', JSON.stringify(HUB_EDGES));
+      return json({ ok: true, edge: [body.from, body.to, body.label || ''] });
     }
     return new Response('Not found', { status: 404 });
   }
