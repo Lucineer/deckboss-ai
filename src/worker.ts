@@ -49,32 +49,66 @@ const HUB_EDGES: (string | undefined)[][] = [
 ];
 
 // ── Workflow Templates ──
-const WORKFLOW_TEMPLATES: Record<string, any> = {
-  'agent-chain': { name: 'Agent Chain', desc: 'Hub → Agent A → Agent B → Storage (linear chain)', pattern: [
-    { nodes: [{ id: 'hub', label: 'Hub', type: 'hub', color: '#f78166', icon: '⚓' }, { id: 'agent-a', label: 'Agent A', type: 'agent', color: '#F59E0B', icon: '🤖' }, { id: 'agent-b', label: 'Agent B', type: 'agent', color: '#00d4ff', icon: '🤖' }, { id: 'storage', label: 'Storage', type: 'storage', color: '#64748b', icon: '💾' }] },
-    { edges: [['hub','agent-a','request'],['agent-a','agent-b','transformed'],['agent-b','storage','output']] }
-  ]},
-  'fan-out': { name: 'Fan-Out', desc: 'Hub → multiple agents simultaneously → aggregate results', pattern: [
-    { nodes: [{ id: 'hub', label: 'Hub', type: 'hub', color: '#f78166', icon: '⚓' }, { id: 'agent-1', label: 'Agent 1', type: 'agent', color: '#F59E0B', icon: '🤖' }, { id: 'agent-2', label: 'Agent 2', type: 'agent', color: '#00d4ff', icon: '🤖' }, { id: 'agent-3', label: 'Agent 3', type: 'agent', color: '#818cf8', icon: '🤖' }, { id: 'aggregate', label: 'Aggregate', type: 'infra', color: '#00E6D6', icon: '📊' }] },
-    { edges: [['hub','agent-1','dispatch'],['hub','agent-2','dispatch'],['hub','agent-3','dispatch'],['agent-1','aggregate','results'],['agent-2','aggregate','results'],['agent-3','aggregate','results']] }
-  ]},
-  'feedback-loop': { name: 'Feedback Loop', desc: 'Hub → Agent → evaluate → Hub (with score threshold)', pattern: [
-    { nodes: [{ id: 'hub', label: 'Hub', type: 'hub', color: '#f78166', icon: '⚓' }, { id: 'agent', label: 'Agent', type: 'agent', color: '#F59E0B', icon: '🤖' }, { id: 'evaluator', label: 'Evaluator', type: 'meta', color: '#22c55e', icon: '📏' }] },
-    { edges: [['hub','agent','task'],['agent','evaluator','output'],['evaluator','hub','score: retry if < 0.8']] }
-  ]},
-  'n8n-style': { name: 'n8n-Style', desc: 'Hub → trigger → condition branch → parallel actions → merge', pattern: [
-    { nodes: [{ id: 'hub', label: 'Hub', type: 'hub', color: '#f78166', icon: '⚓' }, { id: 'trigger', label: 'Trigger', type: 'infra', color: '#00E6D6', icon: '⚡' }, { id: 'condition', label: 'Condition', type: 'meta', color: '#a855f7', icon: '🔀' }, { id: 'action-a', label: 'Action A', type: 'agent', color: '#F59E0B', icon: '🤖' }, { id: 'action-b', label: 'Action B', type: 'agent', color: '#00d4ff', icon: '🤖' }, { id: 'merge', label: 'Merge', type: 'infra', color: '#00E6D6', icon: '🔗' }] },
-    { edges: [['hub','trigger','event'],['trigger','condition','payload'],['condition','action-a','if true'],['condition','action-b','if false'],['action-a','merge','result'],['action-b','merge','result']] }
-  ]},
-  'crewai-style': { name: 'CrewAI-Style', desc: 'Hub → manager → workers (delegation pattern)', pattern: [
-    { nodes: [{ id: 'hub', label: 'Hub', type: 'hub', color: '#f78166', icon: '⚓' }, { id: 'manager', label: 'Manager', type: 'meta', color: '#a855f7', icon: '👔' }, { id: 'worker-1', label: 'Worker 1', type: 'agent', color: '#F59E0B', icon: '🤖' }, { id: 'worker-2', label: 'Worker 2', type: 'agent', color: '#00d4ff', icon: '🤖' }, { id: 'worker-3', label: 'Worker 3', type: 'agent', color: '#818cf8', icon: '🤖' }] },
-    { edges: [['hub','manager','objective'],['manager','worker-1','delegate'],['manager','worker-2','delegate'],['manager','worker-3','delegate'],['worker-1','manager','report'],['worker-2','manager','report'],['worker-3','manager','report']] }
-  ]},
-  'langgraph-style': { name: 'LangGraph-Style', desc: 'Hub → state → conditional edges → subgraphs', pattern: [
-    { nodes: [{ id: 'hub', label: 'Hub', type: 'hub', color: '#f78166', icon: '⚓' }, { id: 'state', label: 'State', type: 'infra', color: '#00E6D6', icon: '📦' }, { id: 'router', label: 'Router', type: 'meta', color: '#a855f7', icon: '🔀' }, { id: 'sub-a', label: 'Sub A', type: 'agent', color: '#F59E0B', icon: '🤖' }, { id: 'sub-b', label: 'Sub B', type: 'agent', color: '#00d4ff', icon: '🤖' }, { id: 'join', label: 'Join', type: 'infra', color: '#00E6D6', icon: '🔗' }] },
-    { edges: [['hub','state','init'],['state','router','route'],['router','sub-a','path A'],['router','sub-b','path B'],['sub-a','join','partial'],['sub-b','join','partial'],['join','state','update state']] }
-  ]},
-};
+const WORKFLOW_TEMPLATES = [
+  { name: 'agent-chain', description: 'Linear Hub→A→B→Storage',
+    nodes: [
+      { id: 'hub', label: 'Hub', type: 'hub', color: '#f78166', icon: '⚓' },
+      { id: 'agent-a', label: 'Agent A', type: 'agent', color: '#F59E0B', icon: '🤖' },
+      { id: 'agent-b', label: 'Agent B', type: 'agent', color: '#00d4ff', icon: '🤖' },
+      { id: 'storage', label: 'Storage', type: 'storage', color: '#64748b', icon: '💾' }
+    ],
+    edges: [['hub','agent-a','request'],['agent-a','agent-b','transformed'],['agent-b','storage','output']]
+  },
+  { name: 'fan-out', description: 'Hub→multiple agents→merge',
+    nodes: [
+      { id: 'hub', label: 'Hub', type: 'hub', color: '#f78166', icon: '⚓' },
+      { id: 'agent-1', label: 'Agent 1', type: 'agent', color: '#F59E0B', icon: '🤖' },
+      { id: 'agent-2', label: 'Agent 2', type: 'agent', color: '#00d4ff', icon: '🤖' },
+      { id: 'agent-3', label: 'Agent 3', type: 'agent', color: '#818cf8', icon: '🤖' },
+      { id: 'merge', label: 'Merge', type: 'infra', color: '#00E6D6', icon: '📊' }
+    ],
+    edges: [['hub','agent-1','dispatch'],['hub','agent-2','dispatch'],['hub','agent-3','dispatch'],['agent-1','merge','results'],['agent-2','merge','results'],['agent-3','merge','results']]
+  },
+  { name: 'feedback-loop', description: 'Hub→Agent→evaluate→Hub',
+    nodes: [
+      { id: 'hub', label: 'Hub', type: 'hub', color: '#f78166', icon: '⚓' },
+      { id: 'agent', label: 'Agent', type: 'agent', color: '#F59E0B', icon: '🤖' },
+      { id: 'evaluate', label: 'Evaluate', type: 'meta', color: '#22c55e', icon: '📏' }
+    ],
+    edges: [['hub','agent','task'],['agent','evaluate','output'],['evaluate','hub','score']]
+  },
+  { name: 'n8n-trigger', description: 'Hub→trigger→condition→parallel→merge',
+    nodes: [
+      { id: 'hub', label: 'Hub', type: 'hub', color: '#f78166', icon: '⚓' },
+      { id: 'trigger', label: 'Trigger', type: 'infra', color: '#00E6D6', icon: '⚡' },
+      { id: 'condition', label: 'Condition', type: 'meta', color: '#a855f7', icon: '🔀' },
+      { id: 'parallel-a', label: 'Parallel A', type: 'agent', color: '#F59E0B', icon: '🤖' },
+      { id: 'parallel-b', label: 'Parallel B', type: 'agent', color: '#00d4ff', icon: '🤖' },
+      { id: 'merge', label: 'Merge', type: 'infra', color: '#00E6D6', icon: '🔗' }
+    ],
+    edges: [['hub','trigger','event'],['trigger','condition','payload'],['condition','parallel-a','if true'],['condition','parallel-b','if false'],['parallel-a','merge','result'],['parallel-b','merge','result']]
+  },
+  { name: 'crewai-delegation', description: 'Hub→manager→workers',
+    nodes: [
+      { id: 'hub', label: 'Hub', type: 'hub', color: '#f78166', icon: '⚓' },
+      { id: 'manager', label: 'Manager', type: 'meta', color: '#a855f7', icon: '👔' },
+      { id: 'worker-1', label: 'Worker 1', type: 'agent', color: '#F59E0B', icon: '🤖' },
+      { id: 'worker-2', label: 'Worker 2', type: 'agent', color: '#00d4ff', icon: '🤖' },
+      { id: 'worker-3', label: 'Worker 3', type: 'agent', color: '#818cf8', icon: '🤖' }
+    ],
+    edges: [['hub','manager','objective'],['manager','worker-1','delegate'],['manager','worker-2','delegate'],['manager','worker-3','delegate'],['worker-1','manager','report'],['worker-2','manager','report'],['worker-3','manager','report']]
+  },
+  { name: 'langgraph-state', description: 'Hub→state→conditional→subgraphs',
+    nodes: [
+      { id: 'hub', label: 'Hub', type: 'hub', color: '#f78166', icon: '⚓' },
+      { id: 'state', label: 'State', type: 'infra', color: '#00E6D6', icon: '📦' },
+      { id: 'conditional', label: 'Conditional', type: 'meta', color: '#a855f7', icon: '🔀' },
+      { id: 'subgraph-a', label: 'Subgraph A', type: 'agent', color: '#F59E0B', icon: '🤖' },
+      { id: 'subgraph-b', label: 'Subgraph B', type: 'agent', color: '#00d4ff', icon: '🤖' }
+    ],
+    edges: [['hub','state','init'],['state','conditional','route'],['conditional','subgraph-a','path A'],['conditional','subgraph-b','path B'],['subgraph-a','state','update'],['subgraph-b','state','update']]
+  }
+];
 
 // ── Landing HTML with Hub-and-Spoke Canvas ──
 function landing(): string {
@@ -84,7 +118,7 @@ function landing(): string {
   '#canvas{position:absolute;top:0;left:0;width:100%;height:100%;cursor:grab}#canvas.dragging{cursor:grabbing}' +
   '.toolbar{position:fixed;top:0;left:0;right:0;height:48px;background:#0e0e1a;border-bottom:1px solid #1c1c35;display:flex;align-items:center;padding:0 16px;gap:12px;z-index:10}' +
   '.toolbar .logo{font-weight:700;font-size:1rem;background:linear-gradient(90deg,#f78166,#58a6ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent}' +
-  '.toolbar .sep{width:1px;height:24px;background:#1c1c35}' +
+  '.toolbar .sep{width:1px;height:24px;background:#1c1c35}.alert-bar{position:fixed;top:48px;left:0;right:0;height:28px;background:#161b22;border-bottom:1px solid #1c1c35;display:flex;align-items:center;overflow:hidden;z-index:9;padding:0 16px}.alert-bar .alert-item{display:flex;align-items:center;gap:6px;font-size:.72rem;white-space:nowrap;animation:scroll-alert 20s linear infinite;color:#8A93B4}.alert-bar .alert-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}.alert-dot.green{background:#1FCB58}.alert-dot.yellow{background:#F59E0B}.alert-dot.red{background:#f85149}@keyframes scroll-alert{0%{transform:translateX(100%)}100%{transform:translateX(-200%)}}' +
   '.view-btn{padding:4px 12px;border-radius:6px;border:1px solid #1c1c35;background:transparent;color:#8A93B4;font-size:.8rem;cursor:pointer;transition:all .15s}' +
   '.view-btn:hover{border-color:#58a6ff;color:#e0e0e0}.view-btn.active{background:#58a6ff22;border-color:#58a6ff;color:#58a6ff}' +
   '.status{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:.75rem;color:#8A93B4}' +
@@ -122,7 +156,7 @@ function landing(): string {
   '<div class="sep"></div>' +
   '<select id="wf-select" style="background:#0e0e1a;color:#8A93B4;border:1px solid #1c1c35;border-radius:6px;padding:4px 8px;font-size:.78rem;cursor:pointer"><option value="">Workflows...</option>' +
   '<option value="agent-chain">Agent Chain</option><option value="fan-out">Fan-Out</option><option value="feedback-loop">Feedback Loop</option>' +
-  '<option value="n8n-style">n8n-Style</option><option value="crewai-style">CrewAI-Style</option><option value="langgraph-style">LangGraph-Style</option></select>' +
+  '<option value="n8n-trigger">n8n-Trigger</option><option value="crewai-delegation">CrewAI-Delegation</option><option value="langgraph-state">LangGraph-State</option></select>' +
   '<button class="view-btn" onclick="loadWorkflow()" id="btn-wf">Apply</button>' +
   '<div class="status"><div class="dot"></div><span id="node-count">17 nodes</span> · <span id="edge-count">25 links</span></div></div>' +
   '<canvas id="canvas"></canvas>' +
@@ -143,17 +177,17 @@ function landing(): string {
   'var canvas=document.getElementById("canvas");var ctx=canvas.getContext("2d");var dpr=window.devicePixelRatio||1;' +
   'var viewMode="flowchart";var nodes=[];var dragNode=null;var offsetX=0,offsetY=0;var panX=0,panY=0;var isPan=false;var lastMX=0,lastMY=0;var hoveredNode=null;var selectedNode=null;' +
   'function resize(){canvas.width=window.innerWidth*dpr;canvas.height=window.innerHeight*dpr;canvas.style.width=window.innerWidth+"px";canvas.style.height=window.innerHeight+"px";ctx.scale(dpr,dpr);if(nodes.length===0)initNodes();draw();}' +
-  'function initNodes(){var cx=window.innerWidth/2;var cy=window.innerHeight/2+24;var hub=NODES[0];nodes.push({id:hub.id,label:hub.label,type:hub.type,color:hub.color,icon:hub.icon,desc:hub.desc,url:hub.url,x:cx,y:cy,r:getR(hub.type,5),pulse:0});' +
+  'function initNodes(){var cx=window.innerWidth/2;var cy=window.innerHeight/2+24;var hub=NODES[0];nodes.push({id:hub.id,label:hub.label,type:hub.type,color:hub.color,icon:hub.icon,desc:hub.desc,url:hub.url,x:cx,y:cy,r:getR(hub.type),pulse:0});' +
   'var agents=NODES.filter(function(n){return n.type==="agent"||n.type==="app"||n.type==="meta";});' +
   'var infra=NODES.filter(function(n){return n.type==="infra"||n.type==="storage";});' +
   'var r1=Math.min(cx,cy)*0.55;agents.forEach(function(n,i){var a=(i/agents.length)*Math.PI*2-Math.PI/2;nodes.push({id:n.id,label:n.label,type:n.type,color:n.color,icon:n.icon,desc:n.desc,url:n.url,x:cx+Math.cos(a)*r1,y:cy+Math.sin(a)*r1,r:getR(n.type),pulse:0});});' +
   'var r2=r1+80;infra.forEach(function(n,i){var a=(i/infra.length)*Math.PI*2;nodes.push({id:n.id,label:n.label,type:n.type,color:n.color,icon:n.icon,desc:n.desc,url:n.url,x:cx+Math.cos(a)*r2,y:cy+Math.sin(a)*r2,r:getR(n.type),pulse:0});});' +
   'loadPriorities();}' +
   // Base radius by type: hub=44, agent=32, app=30, meta=28, infra=26, storage=24
-  'var nodePriorities={};var BASE_R={hub:44,agent:32,app:30,meta:28,infra:26,storage:24};' +
-  'function getR(type,p){var base=BASE_R[type]||28;var pri=p||nodePriorities[type]||5;return base*(1+pri/20);}' +
-  // Load priorities from API and apply
-  'function loadPriorities(){fetch("/api/nodes/priority").then(function(r){return r.json()}).then(function(d){if(d.priorities){nodePriorities=d.priorities;nodes.forEach(function(n){var p=nodePriorities[n.id];if(p!==undefined)n.r=getR(n.type,p);});}}).catch(function(){});}' +
+  'var BASE_R={hub:44,agent:32,app:30,meta:28,infra:26,storage:24};' +
+  'function getR(type){return BASE_R[type]||28;}' +
+  // Load priorities from KV and scale radius: r = baseRadius * (1 + priority/20)
+  'function loadPriorities(){Promise.all(nodes.map(function(n){return fetch("/api/nodes/"+n.id+"/priority").then(function(r){return r.json()}).then(function(d){if(d.priority)n.r=getR(n.type)*(1+d.priority/20);}).catch(function(){});})).catch(function(){});}' +
   'function draw(){ctx.save();ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,window.innerWidth,window.innerHeight);' +
   // Grid
   'ctx.strokeStyle="#1c1c3515";ctx.lineWidth=1;for(var gx=0;gx<window.innerWidth;gx+=40){ctx.beginPath();ctx.moveTo(gx,0);ctx.lineTo(gx,window.innerHeight);ctx.stroke();}for(var gy=0;gy<window.innerHeight;gy+=40){ctx.beginPath();ctx.moveTo(0,gy);ctx.lineTo(window.innerWidth,gy);ctx.stroke();}' +
@@ -187,7 +221,7 @@ function landing(): string {
   // Edge hit detection — returns edge if mouse is within 6px of the line segment
   'function hitEdge(mx,my){var best=null;var bestD=6;EDGES.forEach(function(e){var fn=getNode(e[0]);var tn=getNode(e[1]);if(!fn||!tn)return;var dx=tn.x-fn.x;var dy=tn.y-fn.y;var len2=dx*dx+dy*dy;if(len2===0)return;var t=Math.max(0,Math.min(1,((mx-fn.x)*dx+(my-fn.y)*dy)/len2));var px=fn.x+t*dx;var py=fn.y+t*dy;var d=Math.sqrt((mx-px)*(mx-px)+(my-py)*(my-py));if(d<bestD){bestD=d;best=e;}});return best;}' +
   // Edge IO history cache
-  'var edgeHistory={};function loadEdgeHistory(from,to){var key=from+"-"+to;if(edgeHistory[key])return;fetch("/api/edges/"+from+"-"+to+"/history").then(function(r){return r.json()}).then(function(d){edgeHistory[key]=d.history||[];}).catch(function(){});}' +
+  'var edgeHistory={};function loadEdgeHistory(from,to){var key=from+"-"+to;if(edgeHistory[key])return;fetch("/api/edges/history?from="+encodeURIComponent(from)+"&to="+encodeURIComponent(to)).then(function(r){return r.json()}).then(function(d){edgeHistory[key]=d.history||[];}).catch(function(){});}' +
   // Mouse events
   'canvas.addEventListener("mousedown",function(e){var r=canvas.getBoundingClientRect();var mx=e.clientX-r.left;var my=e.clientY-r.top;var hit=hitTest(mx,my);if(hit){dragNode=hit;offsetX=mx-hit.x;offsetY=my-hit.y;canvas.classList.add("dragging");}else{isPan=true;lastMX=mx;lastMY=my;canvas.classList.add("dragging");}});' +
   'canvas.addEventListener("mousemove",function(e){var r=canvas.getBoundingClientRect();var mx=e.clientX-r.left;var my=e.clientY-r.top;' +
@@ -218,10 +252,10 @@ function landing(): string {
   'fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg})}).then(function(r){return r.json()}).then(function(d){addMsg(d.response||d.error,"a");if(d.workflow)applyCustomWorkflow(d.workflow);}).catch(function(e){addMsg("Error: "+e.message,"a");});}' +
   'function addMsg(text,cls){var d=document.getElementById("chat-msgs");var m=document.createElement("div");m.className="msg "+cls;m.textContent=text;d.appendChild(m);d.scrollTop=d.scrollHeight;}' +
   // View modes
-  'function setView(mode){viewMode=mode;document.querySelectorAll(".view-btn").forEach(function(b){b.classList.remove("active");});document.getElementById("btn-"+(mode==="flowchart"?"flow":mode==="spreadsheet"?"sheet":"topo")).classList.add("active");' +
+  'function setView(mode){viewMode=mode;document.querySelectorAll(".view-btn").forEach(function(b){b.classList.remove("active");});document.getElementById("btn-"+(mode==="flowchart"?"flow":mode==="spreadsheet"?"sheet":mode==="topology"?"topo":"orbital")).classList.add("active");' +
   'document.getElementById("sheet-overlay").classList.toggle("show",mode==="spreadsheet");canvas.style.display=(mode==="spreadsheet")?"none":"block";' +
   'if(mode==="spreadsheet")renderSpreadsheet();' +
-  'if(mode==="topology")layoutTopology();}' +
+  'if(mode==="topology")layoutTopology();function layoutOrbital(){var cx=window.innerWidth/2;var cy=window.innerHeight/2+60;var clusters={agent:[],app:[],meta:[],infra:[],storage:[],hub:[]};nodes.forEach(function(n){if(clusters[n.type])clusters[n.type].push(n);});var types=Object.keys(clusters).filter(function(t){return t!=="hub"&&clusters[t].length>0;});var cr=Math.min(cx,cy)*0.5;types.forEach(function(t,i){var a=(i/types.length)*Math.PI*2-Math.PI/2;var clusterX=cx+Math.cos(a)*cr;var clusterY=cy+Math.sin(a)*cr;var members=clusters[t];members.forEach(function(n,j){var subr=50+j*30;var sa=(j/members.length)*Math.PI*2;n.x=clusterX+Math.cos(sa)*subr;n.y=clusterY+Math.sin(sa)*subr;});});var hubNode=nodes[0];if(hubNode&&hubNode.id==="hub"){hubNode.x=cx;hubNode.y=cy;}}if(mode==="orbital")layoutOrbital();}' +
   // Spreadsheet view
   'function renderSpreadsheet(){var o=document.getElementById("sheet-overlay");' +
   'var rows=NODES.map(function(n){var io=IO_STREAMS[n.id]||{in:[],out:[]};return[n.icon+" "+n.label,n.type,n.desc,io.out.length?io.out[io.out.length-1].msg:"idle",io.in.length?io.in[io.in.length-1].msg:"idle",n.url?"<a href=\'"+n.url+"\' target=\'_blank\' style=\'color:#58a6ff\'>Open →</a>":"—"];});' +
@@ -232,9 +266,9 @@ function landing(): string {
   'nodes.forEach(function(n){var layer=layers.find(function(l){return l.type===n.type;});if(layer){var sameType=nodes.filter(function(nn){return nn.type===n.type;});var idx=sameType.indexOf(n);var a=(idx/sameType.length)*Math.PI*2-Math.PI/2;n.x=cx+Math.cos(a)*layer.r;n.y=cy+Math.sin(a)*layer.r;}});}' +
   // Workflow template loader
   'function loadWorkflow(){var sel=document.getElementById("wf-select");var key=sel.value;if(!key)return;' +
-  'fetch("/api/workflows").then(function(r){return r.json()}).then(function(d){var wf=d.templates[key];if(!wf){addMsg("Workflow not found","a");return;}' +
+  'fetch("/api/workflows",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:key})}).then(function(r){return r.json()}).then(function(d){var wf=d.template;if(!wf){addMsg("Workflow not found","a");return;}' +
   'addMsg("Loading workflow: "+wf.name,"a");' +
-  'var pat=wf.pattern;var wNodes=pat[0].nodes;var wEdges=pat[1].edges;' +
+  'var wNodes=wf.nodes;var wEdges=wf.edges;' +
   'var cx=window.innerWidth/2;var cy=window.innerHeight/2+24;' +
   // Remove existing custom workflow nodes
   'nodes=nodes.filter(function(n){return !n.custom;});EDGES.length=0;ORIG_EDGES.forEach(function(e){EDGES.push(e);});' +
@@ -256,7 +290,10 @@ function landing(): string {
   // Keyboard
   'document.addEventListener("keydown",function(e){if(e.key==="Escape")closeDetail();});' +
   // Init
-  'window.addEventListener("resize",resize);resize();' +
+  'window.addEventListener("resize",resize);resize();' + 'function layoutOrbital(){var cx=window.innerWidth/2,cy=window.innerHeight/2+60;var gs={};nodes.forEach(function(n){if(!gs[n.type])gs[n.type]=[];gs[n.type].push(n);});var ts=Object.keys(gs).filter(function(t){return t!=="hub";});ts.forEach(function(t,i){var a=(i/ts.length)*Math.PI*2-Math.PI/2,cr=Math.min(cx,cy)*0.5;var mx=cx+Math.cos(a)*cr,my=cy+Math.sin(a)*cr;gs[t].forEach(function(n,j){var sr=50+j*30,sa=(j/gs[t].length)*Math.PI*2;n.x=mx+Math.cos(sa)*sr;n.y=my+Math.sin(sa)*sr;});});var h=nodes[0];if(h){h.x=cx;h.y=cy;}}' + 'setInterval(function(){var b=document.getElementById("alert-bar");if(!b)return;var al=[];NODES.forEach(function(n){var io=IO_STREAMS[n.id];if(!io)return;var lo=io.out.length?io.out[io.out.length-1].t:0;var li=io.in.length?io.in[io.in.length-1].t:0;if(Date.now()-lo>30000&&Date.now()-li>30000)al.push({t:"red",m:n.label+" idle"});else if(io.out.length>5)al.push({t:"yellow",m:n.label+" burst"});});if(!al.length)al.push({t:"green",m:"Fleet online — "+NODES.length+" vessels"});b.innerHTML=al.slice(0,5).map(function(a){return"<div class=alert-item><span class=alert-dot "+a.t+"></span>"+a.m+"</div>";}).join("");},5000);' + 
+  '' + // live-js placeholder filled by init
+
+  '</script></body></html>';
   '</script></body></html>';
 }
 
@@ -279,57 +316,68 @@ export default {
     if (path === '/api/nodes') return json({ nodes: HUB_NODES.map(function(n) { var io = { in: [], out: [] }; return { ...n, io }; }), total: HUB_NODES.length });
     if (path === '/api/edges') return json({ edges: HUB_EDGES, total: HUB_EDGES.length });
 
-    // Workflow templates
-    if (path === '/api/workflows') return json({ templates: WORKFLOW_TEMPLATES });
-
-    // Node priority — GET returns all priorities, POST sets one
-    if (path === '/api/nodes/priority') {
-      if (method === 'GET') {
-        try {
-          const raw = await env.DECKBOSS_KV.get('node:priorities');
-          const priorities = raw ? JSON.parse(raw) : {};
-          return json({ priorities });
-        } catch { return json({ priorities: {} }); }
-      }
+    // Workflow templates — GET returns all, POST with {name} returns specific
+    if (path === '/api/workflows') {
+      if (method === 'GET') return json({ templates: WORKFLOW_TEMPLATES });
       if (method === 'POST') {
         try {
-          const body = await request.json() as { nodeId: string; priority: number };
-          if (!body.nodeId || typeof body.priority !== 'number' || body.priority < 1 || body.priority > 10) {
-            return json({ error: 'Requires {nodeId, priority: 1-10}' }, 400);
-          }
-          const raw = await env.DECKBOSS_KV.get('node:priorities');
-          const priorities = raw ? JSON.parse(raw) : {};
-          priorities[body.nodeId] = body.priority;
-          await env.DECKBOSS_KV.put('node:priorities', JSON.stringify(priorities));
-          return json({ ok: true, nodeId: body.nodeId, priority: body.priority });
+          const body = await request.json() as { name: string };
+          if (!body.name) return json({ error: 'Requires {name}' }, 400);
+          const tmpl = WORKFLOW_TEMPLATES.find(function(t: any) { return t.name === body.name; });
+          if (!tmpl) return json({ error: 'Template not found' }, 404);
+          return json({ template: tmpl });
         } catch (e: any) { return json({ error: e.message }, 500); }
       }
     }
 
-    // Edge IO history — POST to record, GET to retrieve
-    const edgeHistMatch = path.match(/^\/api\/edges\/([^/]+)-([^/]+)\/history$/);
-    if (edgeHistMatch) {
-      const edgeFrom = edgeHistMatch[1];
-      const edgeTo = edgeHistMatch[2];
-      const kvKey = 'edge:history:' + edgeFrom + '-' + edgeTo;
+    // Node priority — per-node GET/POST, stored in KV under 'priority:'+nodeId
+    const nodePriorityMatch = path.match(/^\/api\/nodes\/([^/]+)\/priority$/);
+    if (nodePriorityMatch) {
+      const nodeId = nodePriorityMatch[1];
+      const kvKey = 'priority:' + nodeId;
       if (method === 'GET') {
         try {
           const raw = await env.DECKBOSS_KV.get(kvKey);
+          const priority = raw ? parseInt(raw) : 5;
+          return json({ nodeId: nodeId, priority: priority });
+        } catch { return json({ nodeId: nodeId, priority: 5 }); }
+      }
+      if (method === 'POST') {
+        try {
+          const body = await request.json() as { priority: number };
+          if (typeof body.priority !== 'number' || body.priority < 1 || body.priority > 10) {
+            return json({ error: 'Requires {priority: 1-10}' }, 400);
+          }
+          await env.DECKBOSS_KV.put(kvKey, String(body.priority));
+          return json({ ok: true, nodeId: nodeId, priority: body.priority });
+        } catch (e: any) { return json({ error: e.message }, 500); }
+      }
+    }
+
+    // Edge history — POST to record, GET with ?from=X&to=Y to retrieve
+    if (path === '/api/edges/history') {
+      if (method === 'GET') {
+        var eFrom = url.searchParams.get('from') || '';
+        var eTo = url.searchParams.get('to') || '';
+        if (!eFrom || !eTo) return json({ error: 'Requires ?from=X&to=Y' }, 400);
+        try {
+          const kvKey = 'edge-history:' + eFrom + '-' + eTo;
+          const raw = await env.DECKBOSS_KV.get(kvKey);
           const history = raw ? JSON.parse(raw) : [];
-          return json({ from: edgeFrom, to: edgeTo, history });
-        } catch { return json({ from: edgeFrom, to: edgeTo, history: [] }); }
+          return json({ from: eFrom, to: eTo, history: history });
+        } catch { return json({ from: eFrom, to: eTo, history: [] }); }
       }
       if (method === 'POST') {
         try {
           const body = await request.json() as { from: string; to: string; type: string; data: any };
           if (!body.from || !body.to || !body.type) return json({ error: 'Requires {from, to, type, data}' }, 400);
+          const kvKey = 'edge-history:' + body.from + '-' + body.to;
           const raw = await env.DECKBOSS_KV.get(kvKey);
           const history: any[] = raw ? JSON.parse(raw) : [];
           history.push({ from: body.from, to: body.to, type: body.type, data: body.data, t: Date.now() });
-          // Keep last 50 messages per edge
           while (history.length > 50) history.shift();
           await env.DECKBOSS_KV.put(kvKey, JSON.stringify(history));
-          return json({ ok: true, from: edgeFrom, to: edgeTo, total: history.length });
+          return json({ ok: true, from: body.from, to: body.to, total: history.length });
         } catch (e: any) { return json({ error: e.message }, 500); }
       }
     }
@@ -414,6 +462,28 @@ export default {
       }
     }
 
+
+    // Agent registration
+    if (path === '/api/registered' && method === 'GET') {
+      const list = await env.DECKBOSS_KV.list({ prefix: 'registered:', limit: 100 });
+      const agents: any[] = [];
+      for (const key of list.keys) {
+        try { const raw = await env.DECKBOSS_KV.get(key.name); if (raw) agents.push(JSON.parse(raw)); } catch {}
+      }
+      return json({ agents, total: agents.length });
+    }
+    if (path === '/api/register' && method === 'POST') {
+      const body = await request.json() as { agent_id: string; type: string; endpoint: string; label?: string; color?: string; icon?: string };
+      if (!body.agent_id || !body.endpoint) return json({ error: 'Requires {agent_id, endpoint}' }, 400);
+      const agent = { id: body.agent_id, type: body.type || 'agent', endpoint: body.endpoint, label: body.label || body.agent_id, color: body.color || '#58a6ff', icon: body.icon || '🤖', registeredAt: Date.now() };
+      await env.DECKBOSS_KV.put('registered:' + body.agent_id, JSON.stringify(agent));
+      return json({ ok: true, agent });
+    }
+    var regMatch = path.match(/^\/api\/registered\/([^/]+)$/);
+    if (regMatch && method === 'DELETE') {
+      await env.DECKBOSS_KV.delete('registered:' + regMatch[1]);
+      return json({ ok: true, deleted: regMatch[1] });
+    }
     return new Response('Not found', { status: 404 });
   }
 };
