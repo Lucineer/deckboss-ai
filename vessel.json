@@ -1,40 +1,10 @@
 {
   "name": "deckboss-ai",
-  "displayName": "DeckBoss.ai",
-  "version": "1.0.0",
+  "displayName": "Deckboss",
   "type": "cocapn-vessel",
-  "description": "DeckBoss.ai",
-  "icon": "\ud83d\udcca",
-  "color": "#58a6ff",
-  "category": "productivity",
-  "capabilities": [
-    "spreadsheet",
-    "cells",
-    "analytics"
-  ],
-  "secrets": {
-    "DEEPSEEK_API_KEY": {
-      "required": false,
-      "hint": "https://platform.deepseek.com/api_keys"
-    },
-    "DEEPINFRA_API_KEY": {
-      "required": false,
-      "hint": "https://deepinfra.com/dashboard/keys"
-    },
-    "SILICONFLOW_API_KEY": {
-      "required": false,
-      "hint": "https://cloud.siliconflow.cn"
-    }
-  },
-  "endpoints": {
-    "health": "/health"
-  },
-  "deployment": {
-    "platform": "cloudflare-workers",
-    "minPlan": "free"
-  },
-  "local": {
-    "supported": true,
-    "port": 8787
-  }
+  "category": "infrastructure",
+  "description": "Hub-and-spoke fleet command center with flowchart and spreadsheet views",
+  "capabilities": ["fleet-visualization", "hub-spoke-flowchart", "spreadsheet-view", "topology-view", "agent-routing", "io-streams", "real-time-monitoring"],
+  "endpoints": { "health": "/health", "chat": "/api/chat", "nodes": "/api/nodes", "edges": "/api/edges", "topology": "/api/topology" },
+  "deployment": { "url": "https://deckboss-ai.casey-digennaro.workers.dev" }
 }
