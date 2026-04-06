@@ -35,18 +35,46 @@ const HUB_NODES = [
   { id: 'github', label: 'GitHub', type: 'storage', color: '#64748b', icon: '🐙', desc: 'Git coordination — branches, PRs, issues' },
 ];
 
-// Edges: connections between nodes
-const HUB_EDGES = [
-  ['hub','studylog'],['hub','dmlog'],['hub','makerlog'],['hub','personallog'],['hub','businesslog'],['hub','fishinglog'],
-  ['studylog','kv-store'],['dmlog','kv-store'],['makerlog','kv-store'],['personallog','kv-store'],['businesslog','kv-store'],['fishinglog','kv-store'],
-  ['hub','fleet-rpg'],['hub','dogmind'],['hub','the-seed'],['hub','become'],['hub','self-evolve'],
-  ['hub','luciddreamer'],['hub','capitaine'],['hub','orchestrator'],
-  ['hub','kv-store'],['hub','github'],
-  ['the-seed','github'],['self-evolve','github'],['capitaine','github'],
-  ['orchestrator','kv-store'],['capitaine','orchestrator'],
-  ['fleet-rpg','dmlog'],['dogmind','fishinglog'],
-  ['luciddreamer','studylog'],['luciddreamer','dmlog'],
+// Edges: connections between nodes [from, to, label?]
+const HUB_EDGES: (string | undefined)[][] = [
+  ['hub','studylog','task dispatch'],['hub','dmlog','game commands'],['hub','makerlog','build orders'],['hub','personallog','user queries'],['hub','businesslog','crm data'],['hub','fishinglog','trip logs'],
+  ['studylog','kv-store','memory writes'],['dmlog','kv-store','campaign data'],['makerlog','kv-store','code state'],['personallog','kv-store','user memory'],['businesslog','kv-store','contacts'],['fishinglog','kv-store','catch data'],
+  ['hub','fleet-rpg','encounter triggers'],['hub','dogmind','training cmds'],['hub','the-seed','evolution reqs'],['hub','become','onboarding data'],['hub','self-evolve','mutation config'],
+  ['hub','luciddreamer','content queue'],['hub','capitaine','fleet status'],['hub','orchestrator','event routing'],
+  ['hub','kv-store','config reads'],['hub','github','repo coordination'],
+  ['the-seed','github','branch pushes'],['self-evolve','github','PR merges'],['capitaine','github','release sync'],
+  ['orchestrator','kv-store','event store'],['capitaine','orchestrator','fleet commands'],
+  ['fleet-rpg','dmlog','encounter data'],['dogmind','fishinglog','activity sync'],
+  ['luciddreamer','studylog','content drafts'],['luciddreamer','dmlog','story content'],
 ];
+
+// ── Workflow Templates ──
+const WORKFLOW_TEMPLATES: Record<string, any> = {
+  'agent-chain': { name: 'Agent Chain', desc: 'Hub → Agent A → Agent B → Storage (linear chain)', pattern: [
+    { nodes: [{ id: 'hub', label: 'Hub', type: 'hub', color: '#f78166', icon: '⚓' }, { id: 'agent-a', label: 'Agent A', type: 'agent', color: '#F59E0B', icon: '🤖' }, { id: 'agent-b', label: 'Agent B', type: 'agent', color: '#00d4ff', icon: '🤖' }, { id: 'storage', label: 'Storage', type: 'storage', color: '#64748b', icon: '💾' }] },
+    { edges: [['hub','agent-a','request'],['agent-a','agent-b','transformed'],['agent-b','storage','output']] }
+  ]},
+  'fan-out': { name: 'Fan-Out', desc: 'Hub → multiple agents simultaneously → aggregate results', pattern: [
+    { nodes: [{ id: 'hub', label: 'Hub', type: 'hub', color: '#f78166', icon: '⚓' }, { id: 'agent-1', label: 'Agent 1', type: 'agent', color: '#F59E0B', icon: '🤖' }, { id: 'agent-2', label: 'Agent 2', type: 'agent', color: '#00d4ff', icon: '🤖' }, { id: 'agent-3', label: 'Agent 3', type: 'agent', color: '#818cf8', icon: '🤖' }, { id: 'aggregate', label: 'Aggregate', type: 'infra', color: '#00E6D6', icon: '📊' }] },
+    { edges: [['hub','agent-1','dispatch'],['hub','agent-2','dispatch'],['hub','agent-3','dispatch'],['agent-1','aggregate','results'],['agent-2','aggregate','results'],['agent-3','aggregate','results']] }
+  ]},
+  'feedback-loop': { name: 'Feedback Loop', desc: 'Hub → Agent → evaluate → Hub (with score threshold)', pattern: [
+    { nodes: [{ id: 'hub', label: 'Hub', type: 'hub', color: '#f78166', icon: '⚓' }, { id: 'agent', label: 'Agent', type: 'agent', color: '#F59E0B', icon: '🤖' }, { id: 'evaluator', label: 'Evaluator', type: 'meta', color: '#22c55e', icon: '📏' }] },
+    { edges: [['hub','agent','task'],['agent','evaluator','output'],['evaluator','hub','score: retry if < 0.8']] }
+  ]},
+  'n8n-style': { name: 'n8n-Style', desc: 'Hub → trigger → condition branch → parallel actions → merge', pattern: [
+    { nodes: [{ id: 'hub', label: 'Hub', type: 'hub', color: '#f78166', icon: '⚓' }, { id: 'trigger', label: 'Trigger', type: 'infra', color: '#00E6D6', icon: '⚡' }, { id: 'condition', label: 'Condition', type: 'meta', color: '#a855f7', icon: '🔀' }, { id: 'action-a', label: 'Action A', type: 'agent', color: '#F59E0B', icon: '🤖' }, { id: 'action-b', label: 'Action B', type: 'agent', color: '#00d4ff', icon: '🤖' }, { id: 'merge', label: 'Merge', type: 'infra', color: '#00E6D6', icon: '🔗' }] },
+    { edges: [['hub','trigger','event'],['trigger','condition','payload'],['condition','action-a','if true'],['condition','action-b','if false'],['action-a','merge','result'],['action-b','merge','result']] }
+  ]},
+  'crewai-style': { name: 'CrewAI-Style', desc: 'Hub → manager → workers (delegation pattern)', pattern: [
+    { nodes: [{ id: 'hub', label: 'Hub', type: 'hub', color: '#f78166', icon: '⚓' }, { id: 'manager', label: 'Manager', type: 'meta', color: '#a855f7', icon: '👔' }, { id: 'worker-1', label: 'Worker 1', type: 'agent', color: '#F59E0B', icon: '🤖' }, { id: 'worker-2', label: 'Worker 2', type: 'agent', color: '#00d4ff', icon: '🤖' }, { id: 'worker-3', label: 'Worker 3', type: 'agent', color: '#818cf8', icon: '🤖' }] },
+    { edges: [['hub','manager','objective'],['manager','worker-1','delegate'],['manager','worker-2','delegate'],['manager','worker-3','delegate'],['worker-1','manager','report'],['worker-2','manager','report'],['worker-3','manager','report']] }
+  ]},
+  'langgraph-style': { name: 'LangGraph-Style', desc: 'Hub → state → conditional edges → subgraphs', pattern: [
+    { nodes: [{ id: 'hub', label: 'Hub', type: 'hub', color: '#f78166', icon: '⚓' }, { id: 'state', label: 'State', type: 'infra', color: '#00E6D6', icon: '📦' }, { id: 'router', label: 'Router', type: 'meta', color: '#a855f7', icon: '🔀' }, { id: 'sub-a', label: 'Sub A', type: 'agent', color: '#F59E0B', icon: '🤖' }, { id: 'sub-b', label: 'Sub B', type: 'agent', color: '#00d4ff', icon: '🤖' }, { id: 'join', label: 'Join', type: 'infra', color: '#00E6D6', icon: '🔗' }] },
+    { edges: [['hub','state','init'],['state','router','route'],['router','sub-a','path A'],['router','sub-b','path B'],['sub-a','join','partial'],['sub-b','join','partial'],['join','state','update state']] }
+  ]},
+};
 
 // ── Landing HTML with Hub-and-Spoke Canvas ──
 function landing(): string {
@@ -91,6 +119,11 @@ function landing(): string {
   '<button class="view-btn active" onclick="setView(\'flowchart\')" id="btn-flow">Flowchart</button>' +
   '<button class="view-btn" onclick="setView(\'spreadsheet\')" id="btn-sheet">Spreadsheet</button>' +
   '<button class="view-btn" onclick="setView(\'topology\')" id="btn-topo">Topology</button>' +
+  '<div class="sep"></div>' +
+  '<select id="wf-select" style="background:#0e0e1a;color:#8A93B4;border:1px solid #1c1c35;border-radius:6px;padding:4px 8px;font-size:.78rem;cursor:pointer"><option value="">Workflows...</option>' +
+  '<option value="agent-chain">Agent Chain</option><option value="fan-out">Fan-Out</option><option value="feedback-loop">Feedback Loop</option>' +
+  '<option value="n8n-style">n8n-Style</option><option value="crewai-style">CrewAI-Style</option><option value="langgraph-style">LangGraph-Style</option></select>' +
+  '<button class="view-btn" onclick="loadWorkflow()" id="btn-wf">Apply</button>' +
   '<div class="status"><div class="dot"></div><span id="node-count">17 nodes</span> · <span id="edge-count">25 links</span></div></div>' +
   '<canvas id="canvas"></canvas>' +
   '<div class="spreadsheet-overlay" id="sheet-overlay"></div>' +
@@ -102,6 +135,7 @@ function landing(): string {
   '<script>' +
   'const NODES=' + JSON.stringify(HUB_NODES) + ';' +
   'const EDGES=' + JSON.stringify(HUB_EDGES) + ';' +
+  'var ORIG_EDGES=EDGES.slice();' +
   // IO streams simulation
   'const IO_STREAMS={};NODES.forEach(function(n){IO_STREAMS[n.id]={in:[],out:[]};});' +
   'setInterval(function(){NODES.forEach(function(n){if(Math.random()<0.15){var msgs=["query","update","event","health","route","sync"];var m=msgs[Math.floor(Math.random()*msgs.length)];IO_STREAMS[n.id].out.push({msg:m,t:Date.now()});if(IO_STREAMS[n.id].out.length>8)IO_STREAMS[n.id].out.shift();}if(Math.random()<0.1){var m2=["ack","data","ping","result"];IO_STREAMS[n.id].in.push({msg:m2[Math.floor(Math.random()*m2.length)],t:Date.now()});if(IO_STREAMS[n.id].in.length>8)IO_STREAMS[n.id].in.shift();}});},2000);' +
@@ -109,11 +143,17 @@ function landing(): string {
   'var canvas=document.getElementById("canvas");var ctx=canvas.getContext("2d");var dpr=window.devicePixelRatio||1;' +
   'var viewMode="flowchart";var nodes=[];var dragNode=null;var offsetX=0,offsetY=0;var panX=0,panY=0;var isPan=false;var lastMX=0,lastMY=0;var hoveredNode=null;var selectedNode=null;' +
   'function resize(){canvas.width=window.innerWidth*dpr;canvas.height=window.innerHeight*dpr;canvas.style.width=window.innerWidth+"px";canvas.style.height=window.innerHeight+"px";ctx.scale(dpr,dpr);if(nodes.length===0)initNodes();draw();}' +
-  'function initNodes(){var cx=window.innerWidth/2;var cy=window.innerHeight/2+24;var hub=NODES[0];nodes.push({id:hub.id,label:hub.label,type:hub.type,color:hub.color,icon:hub.icon,desc:hub.desc,url:hub.url,x:cx,y:cy,r:44,pulse:0});' +
+  'function initNodes(){var cx=window.innerWidth/2;var cy=window.innerHeight/2+24;var hub=NODES[0];nodes.push({id:hub.id,label:hub.label,type:hub.type,color:hub.color,icon:hub.icon,desc:hub.desc,url:hub.url,x:cx,y:cy,r:getR(hub.type,5),pulse:0});' +
   'var agents=NODES.filter(function(n){return n.type==="agent"||n.type==="app"||n.type==="meta";});' +
   'var infra=NODES.filter(function(n){return n.type==="infra"||n.type==="storage";});' +
-  'var r1=Math.min(cx,cy)*0.55;agents.forEach(function(n,i){var a=(i/agents.length)*Math.PI*2-Math.PI/2;nodes.push({id:n.id,label:n.label,type:n.type,color:n.color,icon:n.icon,desc:n.desc,url:n.url,x:cx+Math.cos(a)*r1,y:cy+Math.sin(a)*r1,r:32,pulse:0});});' +
-  'var r2=r1+80;infra.forEach(function(n,i){var a=(i/infra.length)*Math.PI*2;nodes.push({id:n.id,label:n.label,type:n.type,color:n.color,icon:n.icon,desc:n.desc,url:n.url,x:cx+Math.cos(a)*r2,y:cy+Math.sin(a)*r2,r:26,pulse:0});});}' +
+  'var r1=Math.min(cx,cy)*0.55;agents.forEach(function(n,i){var a=(i/agents.length)*Math.PI*2-Math.PI/2;nodes.push({id:n.id,label:n.label,type:n.type,color:n.color,icon:n.icon,desc:n.desc,url:n.url,x:cx+Math.cos(a)*r1,y:cy+Math.sin(a)*r1,r:getR(n.type),pulse:0});});' +
+  'var r2=r1+80;infra.forEach(function(n,i){var a=(i/infra.length)*Math.PI*2;nodes.push({id:n.id,label:n.label,type:n.type,color:n.color,icon:n.icon,desc:n.desc,url:n.url,x:cx+Math.cos(a)*r2,y:cy+Math.sin(a)*r2,r:getR(n.type),pulse:0});});' +
+  'loadPriorities();}' +
+  // Base radius by type: hub=44, agent=32, app=30, meta=28, infra=26, storage=24
+  'var nodePriorities={};var BASE_R={hub:44,agent:32,app:30,meta:28,infra:26,storage:24};' +
+  'function getR(type,p){var base=BASE_R[type]||28;var pri=p||nodePriorities[type]||5;return base*(1+pri/20);}' +
+  // Load priorities from API and apply
+  'function loadPriorities(){fetch("/api/nodes/priority").then(function(r){return r.json()}).then(function(d){if(d.priorities){nodePriorities=d.priorities;nodes.forEach(function(n){var p=nodePriorities[n.id];if(p!==undefined)n.r=getR(n.type,p);});}}).catch(function(){});}' +
   'function draw(){ctx.save();ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,window.innerWidth,window.innerHeight);' +
   // Grid
   'ctx.strokeStyle="#1c1c3515";ctx.lineWidth=1;for(var gx=0;gx<window.innerWidth;gx+=40){ctx.beginPath();ctx.moveTo(gx,0);ctx.lineTo(gx,window.innerHeight);ctx.stroke();}for(var gy=0;gy<window.innerHeight;gy+=40){ctx.beginPath();ctx.moveTo(0,gy);ctx.lineTo(window.innerWidth,gy);ctx.stroke();}' +
@@ -122,6 +162,9 @@ function landing(): string {
   'ctx.beginPath();ctx.moveTo(from.x,from.y);ctx.lineTo(to.x,to.y);ctx.strokeStyle=active?(from.color+"66"):"#1c1c3544";ctx.lineWidth=active?2:1;if(active){ctx.setLineDash([4,4]);ctx.lineDashOffset=-(Date.now()/50)%8;}else{ctx.setLineDash([]);}ctx.stroke();ctx.setLineDash([]);' +
   // Animated packet on active edges
   'if(active){var t=((Date.now()/1000)%2)/2;var px=from.x+(to.x-from.x)*t;var py=from.y+(to.y-from.y)*t;ctx.beginPath();ctx.arc(px,py,3,0,Math.PI*2);ctx.fillStyle=from.color;ctx.fill();}' +
+  // Edge label at midpoint
+  'if(e[2]){var emx=(from.x+to.x)/2;var emy=(from.y+to.y)/2;ctx.save();ctx.font="9px system-ui";ctx.fillStyle="#8A93B4";ctx.textAlign="center";ctx.textBaseline="bottom";' +
+  'var tw=ctx.measureText(e[2]).width;ctx.fillStyle="#0e0e1acc";ctx.fillRect(emx-tw/2-3,emy-14,tw+6,13);ctx.fillStyle="#8A93B4";ctx.fillText(e[2],emx,emy-3);ctx.restore();}' +
   '});' +
   // Nodes
   'nodes.forEach(function(n){var isHovered=hoveredNode===n.id;var isSelected=selectedNode===n.id;var scale=isHovered?1.15:1;var r=n.r*scale;' +
@@ -141,18 +184,29 @@ function landing(): string {
   'ctx.restore();requestAnimationFrame(draw);}' +
   'function getNode(id){return nodes.find(function(n){return n.id===id;});}' +
   'function hitTest(mx,my){for(var i=nodes.length-1;i>=0;i--){var n=nodes[i];var dx=mx-n.x;var dy=my-n.y;if(dx*dx+dy*dy<=n.r*n.r)return n;}return null;}' +
+  // Edge hit detection — returns edge if mouse is within 6px of the line segment
+  'function hitEdge(mx,my){var best=null;var bestD=6;EDGES.forEach(function(e){var fn=getNode(e[0]);var tn=getNode(e[1]);if(!fn||!tn)return;var dx=tn.x-fn.x;var dy=tn.y-fn.y;var len2=dx*dx+dy*dy;if(len2===0)return;var t=Math.max(0,Math.min(1,((mx-fn.x)*dx+(my-fn.y)*dy)/len2));var px=fn.x+t*dx;var py=fn.y+t*dy;var d=Math.sqrt((mx-px)*(mx-px)+(my-py)*(my-py));if(d<bestD){bestD=d;best=e;}});return best;}' +
+  // Edge IO history cache
+  'var edgeHistory={};function loadEdgeHistory(from,to){var key=from+"-"+to;if(edgeHistory[key])return;fetch("/api/edges/"+from+"-"+to+"/history").then(function(r){return r.json()}).then(function(d){edgeHistory[key]=d.history||[];}).catch(function(){});}' +
   // Mouse events
   'canvas.addEventListener("mousedown",function(e){var r=canvas.getBoundingClientRect();var mx=e.clientX-r.left;var my=e.clientY-r.top;var hit=hitTest(mx,my);if(hit){dragNode=hit;offsetX=mx-hit.x;offsetY=my-hit.y;canvas.classList.add("dragging");}else{isPan=true;lastMX=mx;lastMY=my;canvas.classList.add("dragging");}});' +
   'canvas.addEventListener("mousemove",function(e){var r=canvas.getBoundingClientRect();var mx=e.clientX-r.left;var my=e.clientY-r.top;' +
   'if(dragNode){dragNode.x=mx-offsetX;dragNode.y=my-offsetY;return;}' +
   'if(isPan){panX+=mx-lastMX;panY+=my-lastMY;lastMX=mx;lastMY=my;nodes.forEach(function(n){n.x+=mx-lastMX+panX;n.y+=my-lastMY+panY;});panX=0;panY=0;return;}' +
-  'var hit=hitTest(mx,my);hoveredNode=hit?hit.id:null;canvas.style.cursor=hit?"pointer":"grab";showTooltip(hit,e.clientX,e.clientY);});' +
+  'var hit=hitTest(mx,my);hoveredNode=hit?hit.id:null;' +
+  'if(!hit){var edge=hitEdge(mx,my);if(edge){canvas.style.cursor="crosshair";showEdgeTooltip(edge,e.clientX,e.clientY);return;}}' +
+  'canvas.style.cursor=hit?"pointer":"grab";showTooltip(hit,e.clientX,e.clientY);});' +
   'canvas.addEventListener("mouseup",function(){if(dragNode){dragNode=null;canvas.classList.remove("dragging");}isPan=false;canvas.classList.remove("dragging");});' +
   'canvas.addEventListener("click",function(e){var r=canvas.getBoundingClientRect();var hit=hitTest(e.clientX-r.left,e.clientY-r.top);if(hit){selectedNode=hit.id;hit.pulse=1;openDetail(hit);}});' +
   // Tooltip
   'function showTooltip(node,cx,cy){var tt=document.getElementById("tooltip");if(!node){tt.style.display="none";return;}tt.style.display="block";tt.style.left=(cx+16)+"px";tt.style.top=(cy+16)+"px";' +
   'var io=IO_STREAMS[node.id]||{in:[],out:[]};' +
   'tt.innerHTML="<div class=tt-title>"+node.icon+" "+node.label+"</div><div class=tt-type>"+node.type+"</div>"+node.desc+"<div class=tt-io><div class=io-out>↓ out: "+(io.out.length?io.out[io.out.length-1].msg:"idle")+"</div><div class=io-in>↑ in: "+(io.in.length?io.in[io.in.length-1].msg:"idle")+"</div></div>";}' +
+  // Edge tooltip with IO history
+  'function showEdgeTooltip(edge,cx,cy){var tt=document.getElementById("tooltip");tt.style.display="block";tt.style.left=(cx+16)+"px";tt.style.top=(cy+16)+"px";' +
+  'var fromN=getNode(edge[0]);var toN=getNode(edge[1]);var label=edge[2]||"";loadEdgeHistory(edge[0],edge[1]);var key=edge[0]+"-"+edge[1];var hist=edgeHistory[key]||[];' +
+  'var histHtml=hist.length?hist.slice(-5).map(function(h){return "<div style=\\"font-size:.72rem;color:#8A93B4;margin:2px 0\\">["+new Date(h.t).toLocaleTimeString()+"] "+h.type+": "+String(h.data).substring(0,60)+"</div>";}).join(""):"<div style=\\"font-size:.72rem;color:#8A93B4\\">No history yet</div>";' +
+  'tt.innerHTML="<div class=tt-title>"+(fromN?fromN.label:edge[0])+" → "+(toN?toN.label:edge[1])+"</div>"+(label?"<div style=\\"color:#58a6ff;font-size:.78rem;margin:4px 0\\">"+label+"</div>":"")+"<div class=tt-io><div style=\\"font-size:.72rem;color:#8A93B4;margin-top:6px\\">Last "+Math.min(5,hist.length)+" messages:</div>"+histHtml+"</div>";}' +
   // Node detail panel
   'function openDetail(node){var d=document.getElementById("node-detail");d.classList.add("show");document.getElementById("nd-icon").textContent=node.icon;document.getElementById("nd-title").textContent=node.label+" — "+node.desc;var body=document.getElementById("nd-body");' +
   'if(node.url){body.innerHTML="<iframe src=\'"+node.url+"\' sandbox=\'allow-scripts allow-same-origin\' style=\'width:100%;height:100%;border:none;\'></iframe>";}' +
@@ -161,7 +215,7 @@ function landing(): string {
   // Chat
   'var chatCollapsed=false;function toggleChat(){chatCollapsed=!chatCollapsed;var p=document.getElementById("chat-panel");p.classList.toggle("collapsed",chatCollapsed);document.getElementById("chat-toggle").textContent=chatCollapsed?"▲":"▼";}' +
   'function sendChat(){var inp=document.getElementById("chat-inp");var msg=inp.value.trim();if(!msg)return;inp.value="";addMsg(msg,"u");' +
-  'fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg})}).then(function(r){return r.json()}).then(function(d){addMsg(d.response||d.error,"a");}).catch(function(e){addMsg("Error: "+e.message,"a");});}' +
+  'fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg})}).then(function(r){return r.json()}).then(function(d){addMsg(d.response||d.error,"a");if(d.workflow)applyCustomWorkflow(d.workflow);}).catch(function(e){addMsg("Error: "+e.message,"a");});}' +
   'function addMsg(text,cls){var d=document.getElementById("chat-msgs");var m=document.createElement("div");m.className="msg "+cls;m.textContent=text;d.appendChild(m);d.scrollTop=d.scrollHeight;}' +
   // View modes
   'function setView(mode){viewMode=mode;document.querySelectorAll(".view-btn").forEach(function(b){b.classList.remove("active");});document.getElementById("btn-"+(mode==="flowchart"?"flow":mode==="spreadsheet"?"sheet":"topo")).classList.add("active");' +
@@ -176,6 +230,29 @@ function landing(): string {
   'function layoutTopology(){var cx=window.innerWidth/2;var cy=window.innerHeight/2+24;' +
   'var layers=[{type:"hub",r:0},{type:"agent",r:160},{type:"app",r:160},{type:"meta",r:160},{type:"infra",r:260},{type:"storage",r:260}];' +
   'nodes.forEach(function(n){var layer=layers.find(function(l){return l.type===n.type;});if(layer){var sameType=nodes.filter(function(nn){return nn.type===n.type;});var idx=sameType.indexOf(n);var a=(idx/sameType.length)*Math.PI*2-Math.PI/2;n.x=cx+Math.cos(a)*layer.r;n.y=cy+Math.sin(a)*layer.r;}});}' +
+  // Workflow template loader
+  'function loadWorkflow(){var sel=document.getElementById("wf-select");var key=sel.value;if(!key)return;' +
+  'fetch("/api/workflows").then(function(r){return r.json()}).then(function(d){var wf=d.templates[key];if(!wf){addMsg("Workflow not found","a");return;}' +
+  'addMsg("Loading workflow: "+wf.name,"a");' +
+  'var pat=wf.pattern;var wNodes=pat[0].nodes;var wEdges=pat[1].edges;' +
+  'var cx=window.innerWidth/2;var cy=window.innerHeight/2+24;' +
+  // Remove existing custom workflow nodes
+  'nodes=nodes.filter(function(n){return !n.custom;});EDGES.length=0;ORIG_EDGES.forEach(function(e){EDGES.push(e);});' +
+  // Add workflow nodes in a circle
+  'var radius=Math.min(cx,cy)*0.45;wNodes.forEach(function(wn,i){var exists=nodes.find(function(n){return n.id===wn.id;});if(exists)return;' +
+  'var a=(i/wNodes.length)*Math.PI*2-Math.PI/2;nodes.push({id:wn.id,label:wn.label,type:wn.type,color:wn.color,icon:wn.icon,desc:"",x:cx+Math.cos(a)*radius,y:cy+Math.sin(a)*radius,r:getR(wn.type),pulse:1,custom:true});});' +
+  // Add workflow edges
+  'wEdges.forEach(function(we){EDGES.push(we);});' +
+  'updateCounts();addMsg("Applied "+wf.name+": "+wNodes.length+" nodes, "+wEdges.length+" edges","a");}).catch(function(e){addMsg("Error loading workflow: "+e.message,"a");});}' +
+  // Custom workflow from chat
+  'function applyCustomWorkflow(wf){if(!wf||!wf.nodes||!wf.edges)return;' +
+  'var cx=window.innerWidth/2;var cy=window.innerHeight/2+24;' +
+  'var radius=Math.min(cx,cy)*0.4;' +
+  'wf.nodes.forEach(function(wn,i){var exists=nodes.find(function(n){return n.id===wn.id;});if(exists)return;' +
+  'var a=(i/wf.nodes.length)*Math.PI*2-Math.PI/2;nodes.push({id:wn.id,label:wn.label,type:wn.type||"agent",color:wn.color||"#F59E0B",icon:wn.icon||"🤖",desc:wn.desc||"",x:cx+Math.cos(a)*radius,y:cy+Math.sin(a)*radius,r:getR(wn.type||"agent"),pulse:1,custom:true});});' +
+  'wf.edges.forEach(function(we){if(!EDGES.find(function(e){return e[0]===we[0]&&e[1]===we[1];}))EDGES.push(we);});' +
+  'updateCounts();}' +
+  'function updateCounts(){document.getElementById("node-count").textContent=nodes.length+" nodes";document.getElementById("edge-count").textContent=EDGES.length+" links";}' +
   // Keyboard
   'document.addEventListener("keydown",function(e){if(e.key==="Escape")closeDetail();});' +
   // Init
@@ -202,6 +279,61 @@ export default {
     if (path === '/api/nodes') return json({ nodes: HUB_NODES.map(function(n) { var io = { in: [], out: [] }; return { ...n, io }; }), total: HUB_NODES.length });
     if (path === '/api/edges') return json({ edges: HUB_EDGES, total: HUB_EDGES.length });
 
+    // Workflow templates
+    if (path === '/api/workflows') return json({ templates: WORKFLOW_TEMPLATES });
+
+    // Node priority — GET returns all priorities, POST sets one
+    if (path === '/api/nodes/priority') {
+      if (method === 'GET') {
+        try {
+          const raw = await env.DECKBOSS_KV.get('node:priorities');
+          const priorities = raw ? JSON.parse(raw) : {};
+          return json({ priorities });
+        } catch { return json({ priorities: {} }); }
+      }
+      if (method === 'POST') {
+        try {
+          const body = await request.json() as { nodeId: string; priority: number };
+          if (!body.nodeId || typeof body.priority !== 'number' || body.priority < 1 || body.priority > 10) {
+            return json({ error: 'Requires {nodeId, priority: 1-10}' }, 400);
+          }
+          const raw = await env.DECKBOSS_KV.get('node:priorities');
+          const priorities = raw ? JSON.parse(raw) : {};
+          priorities[body.nodeId] = body.priority;
+          await env.DECKBOSS_KV.put('node:priorities', JSON.stringify(priorities));
+          return json({ ok: true, nodeId: body.nodeId, priority: body.priority });
+        } catch (e: any) { return json({ error: e.message }, 500); }
+      }
+    }
+
+    // Edge IO history — POST to record, GET to retrieve
+    const edgeHistMatch = path.match(/^\/api\/edges\/([^/]+)-([^/]+)\/history$/);
+    if (edgeHistMatch) {
+      const edgeFrom = edgeHistMatch[1];
+      const edgeTo = edgeHistMatch[2];
+      const kvKey = 'edge:history:' + edgeFrom + '-' + edgeTo;
+      if (method === 'GET') {
+        try {
+          const raw = await env.DECKBOSS_KV.get(kvKey);
+          const history = raw ? JSON.parse(raw) : [];
+          return json({ from: edgeFrom, to: edgeTo, history });
+        } catch { return json({ from: edgeFrom, to: edgeTo, history: [] }); }
+      }
+      if (method === 'POST') {
+        try {
+          const body = await request.json() as { from: string; to: string; type: string; data: any };
+          if (!body.from || !body.to || !body.type) return json({ error: 'Requires {from, to, type, data}' }, 400);
+          const raw = await env.DECKBOSS_KV.get(kvKey);
+          const history: any[] = raw ? JSON.parse(raw) : [];
+          history.push({ from: body.from, to: body.to, type: body.type, data: body.data, t: Date.now() });
+          // Keep last 50 messages per edge
+          while (history.length > 50) history.shift();
+          await env.DECKBOSS_KV.put(kvKey, JSON.stringify(history));
+          return json({ ok: true, from: edgeFrom, to: edgeTo, total: history.length });
+        } catch (e: any) { return json({ error: e.message }, 500); }
+      }
+    }
+
     // Chat — routes to appropriate vessel or answers fleet questions
     if (method === 'POST' && path === '/api/chat') {
       try {
@@ -212,6 +344,51 @@ export default {
         const key = env.DEEPSEEK_API_KEY;
         if (!key) return json({ error: 'No API key configured' }, 503);
 
+        // Check if user wants to create a workflow
+        const wfMatch = msg.toLowerCase().match(/create\s+workflow\s+["']?(\w[\w\s-]*)$/i) ||
+                        msg.toLowerCase().match(/create\s+workflow\s+["']([^"']+)["']/i) ||
+                        msg.toLowerCase().match(/new\s+workflow\s+["']?(\w[\w\s-]*)/i);
+
+        if (wfMatch) {
+          const wfName = (wfMatch[1] || wfMatch[2] || 'custom').trim().replace(/[^a-z0-9-_ ]/gi, '');
+          const wfKey = 'workflow:' + wfName.replace(/\s+/g, '-').toLowerCase();
+
+          const wfSysPrompt = 'You are a workflow designer for an AI agent fleet. The user wants to create a workflow called "' + wfName + '". ' +
+            'Respond with ONLY a JSON object (no markdown, no backticks) with this shape: {"name":"...","desc":"...","nodes":[{"id":"...","label":"...","type":"agent|app|meta|infra|storage|hub","color":"#hex","icon":"emoji","desc":"..."}],"edges":[["from","to","label"]]}. ' +
+            'Create 3-7 nodes and 3-8 edges that make sense for a workflow called "' + wfName + '". Use realistic agent names and purposes. Types: hub(command), agent(worker), app(application), meta(system), infra(infrastructure), storage(persistence).';
+
+          const wfResp = await fetch(DS, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+            body: JSON.stringify({ model: 'deepseek-chat', messages: [{ role: 'system', content: wfSysPrompt }, { role: 'user', content: msg }], max_tokens: 600, temperature: 0.8 })
+          });
+
+          const wfData = await wfResp.json() as any;
+          let wfContent = wfData.choices?.[0]?.message?.content || '';
+
+          // Try to parse the JSON from the response
+          let wfObj: any = null;
+          try {
+            // Strip markdown code fences if present
+            const cleaned = wfContent.replace(/```json?\s*/g, '').replace(/```/g, '').trim();
+            wfObj = JSON.parse(cleaned);
+          } catch {
+            // If parsing fails, return the raw response
+            return json({ response: 'I tried to create a workflow but couldn\'t parse the structure. Please try again with more detail, like: "create workflow data pipeline with 3 agents".', vessel: null });
+          }
+
+          if (wfObj && wfObj.nodes && wfObj.edges) {
+            await env.DECKBOSS_KV.put(wfKey, JSON.stringify(wfObj));
+            return json({
+              response: 'Created workflow "' + wfName + '" with ' + wfObj.nodes.length + ' nodes and ' + wfObj.edges.length + ' edges. It\'s now on your canvas!',
+              vessel: null,
+              workflow: wfObj
+            });
+          }
+
+          return json({ response: wfContent, vessel: null });
+        }
+
         // Check if user is asking about a specific vessel
         const mentioned = HUB_NODES.find(function(n) { return msg.toLowerCase().includes(n.label.toLowerCase()) || msg.toLowerCase().includes(n.id); });
 
@@ -220,6 +397,7 @@ export default {
           'Apps: Fleet RPG, DogMind Arena, LucidDreamer (content engine). Meta: The Seed (self-evolving repo), Become (bootcamp), Self-Evolve (A/B tester). ' +
           'Infra: Capitaine (flagship), Orchestrator (event bus). Storage: Fleet Memory (KV), GitHub (git coordination). ' +
           'When asked about the fleet, explain how vessels connect and what data flows between them. Keep answers concise. ' +
+          'You can also create workflows. If the user says "create workflow X", describe what agents and connections would be needed. ' +
           (mentioned ? 'The user is asking specifically about ' + mentioned.label + ': ' + mentioned.desc + '.' : '');
 
         const r = await fetch(DS, {
