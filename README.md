@@ -4,7 +4,7 @@
 
 <h1 align="center">deckboss-ai</h1>
 
-<p align="center">Cellular agent spreadsheet — cells that think, learn, and connect.</p>
+<p align="center">A spreadsheet where cells can think, learn, and communicate.</p>
 
 <p align="center">
   <a href="#quick-start">Quick Start</a> ·
@@ -15,97 +15,48 @@
 
 ---
 
-**Live:** [deckboss-ai](https://deckboss-ai.casey-digennaro.workers.dev) · **Powered by [Capitaine](https://github.com/Lucineer/capitaine) · [Cocapn](https://github.com/Lucineer/cocapn)**
+**Live Instance:** [deckboss-ai](https://deckboss-ai.casey-digennaro.workers.dev) · **Built with:** [Capitaine](https://github.com/Lucineer/capitaine) & [Cocapn](https://github.com/Lucineer/cocapn)
 
-The repo IS the agent. deckboss-ai is a cocapn vessel — a self-improving repository that runs on Cloudflare Workers, thinks with LLMs, and coordinates with the fleet through git.
+deckboss is a spreadsheet where each cell is an independent agent. Cells remember instructions, learn from patterns across the sheet, and communicate with each other. Unlike traditional spreadsheets, it's designed for autonomous, continuous operation.
 
 ## Quick Start
 
+Fork and deploy your own instance. This software runs entirely on Cloudflare Workers.
+
 ```bash
-# Fork and deploy
+# Fork and clone this repository
 gh repo fork Lucineer/deckboss-ai --clone
 cd deckboss-ai
+
+# Deploy to Cloudflare Workers
 npx wrangler login
 echo "your-github-token" | npx wrangler secret put GITHUB_TOKEN
-echo "your-llm-key" | npx wrangler secret put DEEPSEEK_API_KEY
+echo "your-api-key" | npx wrangler secret put DEEPSEEK_API_KEY
+
 npx wrangler deploy
 ```
 
-That's it. The vessel is alive.
+Your instance will be available at your Workers subdomain. No backend services or databases are required.
 
 ## Features
 
-- **BYOK v2** — Zero keys in code. All API keys via Cloudflare Secrets Store.
-- **Multi-model** — DeepSeek, SiliconFlow, DeepInfra, Moonshot, z.ai, local models.
-- **Session memory** — Conversations persist and build context over time.
-- **PII safety** — Automatic detection and dehydration of sensitive data.
-- **Rate limiting** — Guest tokens per IP with configurable limits.
-- **Health checks** — Standard `/health` endpoint on all vessels.
-- **Fleet coordination** — CRP-39 protocol for trust, bonds, and events.
+*   **Autonomous Cells:** Each cell operates as an independent agent with memory and communication.
+*   **Multi-Model Runtime:** Supports DeepSeek, SiliconFlow, DeepInfra, and local models. BYOK (Bring Your Own Key) via Cloudflare Secrets.
+*   **Persistent Session Memory:** Conversations and context persist across sessions without resetting.
+*   **PII Safety:** Automatic detection and redaction of sensitive data before external API calls.
+*   **Per-IP Rate Limiting:** Configurable usage boundaries for public deployments.
+*   **Standard Health Interface:** Exposes a consistent `/health` endpoint for monitoring.
 
-## Architecture
+## Limitations
 
-Single-file Cloudflare Worker. Zero runtime dependencies. Inline HTML serving.
-
-```
-src/
-  worker.ts      # The hull — serves users, runs heartbeats
-lib/
-  byok.ts        # Multi-model routing (BYOK v2)
-  ...
-```
+This is an experimental implementation. The agent runtime currently operates on a single Cloudflare Worker, which constrains concurrent agent processing and complex sheet sizes.
 
 ## The Fleet
 
-deckboss-ai is one of 40+ autonomous vessels in the Lucineer fleet. Each vessel is a different domain of one intelligence.
+deckboss-ai is part of the Cocapn Fleet—an open-source collection of agent runtimes and tools. It's a self-improving repository designed to run independently and coordinate through git.
 
+Attribution: Superinstance & Lucineer (DiGennaro et al.)
 
-<details>
-<summary><strong>⚓ The Fleet</strong></summary>
-
-**Flagship vessels**
-
-- [cocapn.ai](https://github.com/Lucineer/capitaine)
-- [personallog.ai](https://github.com/Lucineer/personallog-ai)
-- [businesslog.ai](https://github.com/Lucineer/businesslog-ai)
-- [studylog.ai](https://github.com/Lucineer/studylog-ai)
-- [makerlog.ai](https://github.com/Lucineer/makerlog-ai)
-- [playerlog.ai](https://github.com/Lucineer/playerlog-ai)
-- [dmlog.ai](https://github.com/Lucineer/dmlog-ai)
-- [reallog.ai](https://github.com/Lucineer/reallog-ai)
-- [deckboss.ai](https://github.com/Lucineer/deckboss-ai)
-
-**Fleet services**
-
-- [Fleet Catalog](https://github.com/Lucineer/capitaine/blob/master/docs/fleet/FLEET.md)
-- [Git Agent (full)](https://github.com/Lucineer/git-agent)
-- [Cocapn Lite (minimal)](https://github.com/Lucineer/cocapn-lite)
-- [Fleet Orchestrator](https://github.com/Lucineer/fleet-orchestrator)
-- [Dead Reckoning Engine](https://github.com/Lucineer/dead-reckoning-engine)
-- [Dream Engine](https://github.com/Lucineer/dream-engine)
-- [Seed UI (5 layers)](https://github.com/Lucineer/seed-ui)
-
-**For power users**
-
-- [Cocapn Lite (tabula rasa)](https://github.com/Lucineer/cocapn-lite)
-- [Cocapn (core platform)](https://github.com/Lucineer/cocapn)
-- [ZeroClaw (framework)](https://github.com/Lucineer/zeroclaw)
-
-[View all 106 repos →](https://github.com/orgs/Lucineer/repositories)
-[Fleet manifest →](https://github.com/Lucineer/capitaine/blob/master/docs/fleet/FLEET.md)
-
-</details>
-
-
-## Philosophy
-
-> The repo is the agent. The agent is the repo. Intelligence crystallizes from fluid (LLM calls) to solid (code). The vessel becomes faster and cheaper as it becomes smarter.
-
-- **Fork-first** — Power users fork and customize. Casual users visit the domain.
-- **Pay-for-convenience** — We save you costs through bulk inference, not markups.
-- **Git as coordination** — Agents compete via PRs, not chat.
-- **Soft actualization** — Vessels evolve gently based on usage, not hard updates.
-
-## License
-
-MIT · Superinstance & Lucineer (DiGennaro et al.)
+<div>
+  <a href="https://the-fleet.casey-digennaro.workers.dev">The Fleet</a> · <a href="https://cocapn.ai">Cocapn</a>
+</div>
