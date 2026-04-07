@@ -68,7 +68,7 @@ const _ORIGINAL_NODES = [
   { id: 'personallog', label: 'PersonalLog', type: 'agent', color: '#818cf8', icon: '📝', desc: 'Personal AI assistant with memory', url: 'https://personallog-ai.casey-digennaro.workers.dev' },
   { id: 'businesslog', label: 'BusinessLog', type: 'agent', color: '#3b82f6', icon: '💼', desc: 'Business CRM and meeting simulator', url: 'https://businesslog-ai.casey-digennaro.workers.dev' },
   { id: 'fishinglog', label: 'FishingLog', type: 'agent', color: '#4ade80', icon: '🐟', desc: 'Fishing companion with species tracker', url: 'https://fishinglog-ai.casey-digennaro.workers.dev' },
-  { id: 'fleet-rpg', label: 'Fleet RPG', type: 'app', color: '#ef4444', icon: '⚔️', desc: 'Stats-as-compute RPG encounter engine', url: 'https://fleet-rpg.casey-digennaro.workers.dev' },
+  { id: 'fleet-rpg', endpoint: 'https://fleet-rpg.casey-digennaro.workers.dev', label: 'Fleet RPG', type: 'app', color: '#ef4444', icon: '⚔️', desc: 'Stats-as-compute RPG encounter engine', url: 'https://fleet-rpg.casey-digennaro.workers.dev' },
   { id: 'dogmind', label: 'DogMind', type: 'app', color: '#d69e2e', icon: '🐕', desc: 'Dog training arena with DNA system', url: 'https://dogmind-arena.casey-digennaro.workers.dev' },
   { id: 'the-seed', label: 'The Seed', type: 'meta', color: '#a855f7', icon: '🌱', desc: 'One repo to become them all', url: 'https://the-seed.casey-digennaro.workers.dev' },
   { id: 'become', label: 'Become', type: 'meta', color: '#a855f7', icon: '🔮', desc: 'Captain-to-cocapn bootcamp', url: 'https://become-ai.casey-digennaro.workers.dev' },
