@@ -199,6 +199,7 @@ function landing(): string {
   '<button class="view-btn active" onclick="setView(\'flowchart\')" id="btn-flow">Flowchart</button>' +
   '<button class="view-btn" onclick="setView(\'spreadsheet\')" id="btn-sheet">Spreadsheet</button>' +
   '<button class="view-btn" onclick="setView(\'topology\')" id="btn-topo">Topology</button>' +
+  '<button class="view-btn" onclick="setView(\'timeline\')" id="btn-timeline">Timeline</button>' +
   '<div class="sep"></div>' +
   '<select id="wf-select" style="background:#0e0e1a;color:#8A93B4;border:1px solid #1c1c35;border-radius:6px;padding:4px 8px;font-size:.78rem;cursor:pointer"><option value="">Workflows...</option>' +
   '<option value="agent-chain">Agent Chain</option><option value="fan-out">Fan-Out</option><option value="feedback-loop">Feedback Loop</option>' +
@@ -207,10 +208,11 @@ function landing(): string {
   '<div class="status"><div class="dot"></div><span id="node-count">17 nodes</span> · <span id="edge-count">25 links</span></div></div>' +
   '<canvas id="canvas"></canvas>' +
   '<div class="spreadsheet-overlay" id="sheet-overlay"></div>' +
+  '<div class="tl-overlay" id="tl-overlay"></div>' +
   '<div class="node-detail" id="node-detail"><div class="nd-header"><span class="nd-icon" id="nd-icon"></span><h2 id="nd-title"></h2><button class="nd-close" onclick="closeDetail()">&times;</button></div><div class="nd-body" id="nd-body"></div></div>' +
   '<div class="chat-panel" id="chat-panel"><div class="chat-head" onclick="toggleChat()"><h3>💬 Fleet Chat</h3><span style="color:#8A93B4;font-size:.75rem" id="chat-toggle">▼</span></div>' +
   '<div class="chat-msgs" id="chat-msgs"><div class="msg a">Welcome to Fleet Command. I can route messages to any vessel, show inter-agent data flows, or help you build new workflows. What do you need?</div></div>' +
-  '<div class="chat-input"><input id="chat-inp" placeholder="Ask anything about the fleet..." onkeydown="if(event.key===\'Enter\')sendChat()"><button onclick="sendChat()">Send</button></div></div>' +
+  '<div class="chat-input"><button class="voice-btn" id="voice-btn" onclick="toggleVoice()" title="Voice input">🎤</button><input id="chat-inp" placeholder="Ask anything about the fleet..." onkeydown="if(event.key===\'Enter\')sendChat()"><button onclick="sendChat()">Send</button></div></div>' +
   '<div class="tooltip" id="tooltip" style="display:none"></div>' +
   '<script>' +
   'const NODES=' + JSON.stringify(HUB_NODES) + ';' +
@@ -218,7 +220,7 @@ function landing(): string {
   'var ORIG_EDGES=EDGES.slice();' +
   // IO streams simulation
   'const IO_STREAMS={};NODES.forEach(function(n){IO_STREAMS[n.id]={in:[],out:[]};});' +
-  'setInterval(function(){NODES.forEach(function(n){if(Math.random()<0.15){var msgs=["query","update","event","health","route","sync"];var m=msgs[Math.floor(Math.random()*msgs.length)];IO_STREAMS[n.id].out.push({msg:m,t:Date.now()});if(IO_STREAMS[n.id].out.length>8)IO_STREAMS[n.id].out.shift();}if(Math.random()<0.1){var m2=["ack","data","ping","result"];IO_STREAMS[n.id].in.push({msg:m2[Math.floor(Math.random()*m2.length)],t:Date.now()});if(IO_STREAMS[n.id].in.length>8)IO_STREAMS[n.id].in.shift();}});},2000);' +
+  'setInterval(function(){NODES.forEach(function(n){if(Math.random()<0.15){var msgs=["query","update","event","health","route","sync"];var m=msgs[Math.floor(Math.random()*msgs.length)];IO_STREAMS[n.id].out.push({msg:m,t:Date.now()});if(IO_STREAMS[n.id].out.length>8)IO_STREAMS[n.id].out.shift();if(typeof TL_EVENTS!=="undefined"){TL_EVENTS.push({type:"io",nodeType:n.type,icon:n.icon,label:n.label,msg:"sent: "+m,t:Date.now()});if(TL_EVENTS.length>500)TL_EVENTS.shift();}}if(Math.random()<0.1){var m2=["ack","data","ping","result"];IO_STREAMS[n.id].in.push({msg:m2[Math.floor(Math.random()*m2.length)],t:Date.now()});if(IO_STREAMS[n.id].in.length>8)IO_STREAMS[n.id].in.shift();if(typeof TL_EVENTS!=="undefined"){TL_EVENTS.push({type:"io",nodeType:n.type,icon:n.icon,label:n.label,msg:"recv: "+m2[Math.floor(Math.random()*m2.length)],t:Date.now()});if(TL_EVENTS.length>500)TL_EVENTS.shift();}}});},2000);' +
   // Canvas rendering
   'var canvas=document.getElementById("canvas");var ctx=canvas.getContext("2d");var dpr=window.devicePixelRatio||1;' +
   'var viewMode="flowchart";var nodes=[];var dragNode=null;var offsetX=0,offsetY=0;var panX=0,panY=0;var isPan=false;var lastMX=0,lastMY=0;var hoveredNode=null;var selectedNode=null;' +
@@ -298,9 +300,9 @@ function landing(): string {
   'fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg})}).then(function(r){return r.json()}).then(function(d){addMsg(d.response||d.error,"a");if(d.workflow)applyCustomWorkflow(d.workflow);}).catch(function(e){addMsg("Error: "+e.message,"a");});}' +
   'function addMsg(text,cls){var d=document.getElementById("chat-msgs");var m=document.createElement("div");m.className="msg "+cls;m.textContent=text;d.appendChild(m);d.scrollTop=d.scrollHeight;}' +
   // View modes
-  'function setView(mode){viewMode=mode;document.querySelectorAll(".view-btn").forEach(function(b){b.classList.remove("active");});document.getElementById("btn-"+(mode==="flowchart"?"flow":mode==="spreadsheet"?"sheet":mode==="topology"?"topo":"orbital")).classList.add("active");' +
-  'document.getElementById("sheet-overlay").classList.toggle("show",mode==="spreadsheet");canvas.style.display=(mode==="spreadsheet")?"none":"block";' +
-  'if(mode==="spreadsheet")renderSpreadsheet();' +
+  'function setView(mode){viewMode=mode;document.querySelectorAll(".view-btn").forEach(function(b){b.classList.remove("active");});var btnId=mode==="flowchart"?"flow":mode==="spreadsheet"?"sheet":mode==="topology"?"topo":mode==="timeline"?"timeline":"orbital";var btn=document.getElementById("btn-"+btnId);if(btn)btn.classList.add("active");' +
+  'document.getElementById("sheet-overlay").classList.toggle("show",mode==="spreadsheet");document.getElementById("tl-overlay").classList.toggle("show",mode==="timeline");canvas.style.display=(mode==="spreadsheet"||mode==="timeline")?"none":"block";' +
+  'if(mode==="spreadsheet")renderSpreadsheet();if(mode==="timeline"&&typeof renderTimeline==="function")renderTimeline();' +
   'if(mode==="topology")layoutTopology();function layoutOrbital(){var cx=window.innerWidth/2;var cy=window.innerHeight/2+60;var clusters={agent:[],app:[],meta:[],infra:[],storage:[],hub:[]};nodes.forEach(function(n){if(clusters[n.type])clusters[n.type].push(n);});var types=Object.keys(clusters).filter(function(t){return t!=="hub"&&clusters[t].length>0;});var cr=Math.min(cx,cy)*0.5;types.forEach(function(t,i){var a=(i/types.length)*Math.PI*2-Math.PI/2;var clusterX=cx+Math.cos(a)*cr;var clusterY=cy+Math.sin(a)*cr;var members=clusters[t];members.forEach(function(n,j){var subr=50+j*30;var sa=(j/members.length)*Math.PI*2;n.x=clusterX+Math.cos(sa)*subr;n.y=clusterY+Math.sin(sa)*subr;});});var hubNode=nodes[0];if(hubNode&&hubNode.id==="hub"){hubNode.x=cx;hubNode.y=cy;}}if(mode==="orbital")layoutOrbital();}' +
   // Spreadsheet view
   'function renderSpreadsheet(){var o=document.getElementById("sheet-overlay");' +
@@ -337,9 +339,7 @@ function landing(): string {
   'document.addEventListener("keydown",function(e){if(e.key==="Escape")closeDetail();});' +
   // Init
   'window.addEventListener("resize",resize);resize();' + 'function layoutOrbital(){var cx=window.innerWidth/2,cy=window.innerHeight/2+60;var gs={};nodes.forEach(function(n){if(!gs[n.type])gs[n.type]=[];gs[n.type].push(n);});var ts=Object.keys(gs).filter(function(t){return t!=="hub";});ts.forEach(function(t,i){var a=(i/ts.length)*Math.PI*2-Math.PI/2,cr=Math.min(cx,cy)*0.5;var mx=cx+Math.cos(a)*cr,my=cy+Math.sin(a)*cr;gs[t].forEach(function(n,j){var sr=50+j*30,sa=(j/gs[t].length)*Math.PI*2;n.x=mx+Math.cos(sa)*sr;n.y=my+Math.sin(sa)*sr;});});var h=nodes[0];if(h){h.x=cx;h.y=cy;}}' + 'setInterval(function(){var b=document.getElementById("alert-bar");if(!b)return;var al=[];NODES.forEach(function(n){var io=IO_STREAMS[n.id];if(!io)return;var lo=io.out.length?io.out[io.out.length-1].t:0;var li=io.in.length?io.in[io.in.length-1].t:0;if(Date.now()-lo>30000&&Date.now()-li>30000)al.push({t:"red",m:n.label+" idle"});else if(io.out.length>5)al.push({t:"yellow",m:n.label+" burst"});});if(!al.length)al.push({t:"green",m:"Fleet online — "+NODES.length+" vessels"});b.innerHTML=al.slice(0,5).map(function(a){return"<div class=alert-item><span class=alert-dot "+a.t+"></span>"+a.m+"</div>";}).join("");},5000);' + 
-  '' + // live-js placeholder filled by init
-
-  '</script></body></html>';
+  '<script src="/features.js"><\/script>' +
   '</script></body></html>';
 }
 
@@ -355,6 +355,17 @@ export default {
     }
 
     if (path === '/') return new Response(landing(), { headers: { 'Content-Type': 'text/html;charset=utf-8', ...CSP_OBJ } });
+    if (path === '/features.js') {
+      const js = `var TL_EVENTS=[];var TL_FILTER='all';var NODE_STATUS={};var voiceActive=false;var recognition=null;
+function toggleVoice(){if(!voiceActive)startVoice();else stopVoice();}
+function startVoice(){if(!('webkitSpeechRecognition' in window)&&!('SpeechRecognition' in window)){addMsg('Voice not supported','a');return;}var SR=window.SpeechRecognition||window.webkitSpeechRecognition;recognition=new SR();recognition.continuous=false;recognition.interimResults=true;recognition.lang='en-US';recognition.onresult=function(e){var t='';for(var i=e.resultIndex;i<e.results.length;i++){t+=e.results[i][0].transcript;}document.getElementById('chat-inp').value=t;};recognition.onend=function(){if(voiceActive){sendChat();stopVoice();}};recognition.onerror=function(e){addMsg('Voice error: '+e.error,'a');stopVoice();};recognition.start();voiceActive=true;var btn=document.getElementById('voice-btn');btn.classList.add('recording');btn.classList.remove('listening');btn.textContent='\\u{1F534}';}
+function stopVoice(){if(recognition)recognition.stop();voiceActive=false;var btn=document.getElementById('voice-btn');btn.classList.remove('recording');btn.classList.add('listening');btn.textContent='\\u{1F3A4}';}
+function checkHealth(){NODES.forEach(function(n){if(!n.endpoint)return;fetch(n.endpoint+'/health',{mode:'no-cors'}).then(function(){NODE_STATUS[n.id]={online:true,checkedAt:Date.now()};}).catch(function(){NODE_STATUS[n.id]={online:false,checkedAt:Date.now()};});});}setInterval(checkHealth,10000);checkHealth();
+function renderTimeline(){var o=document.getElementById('tl-overlay');var html='<div class=tl-header><span>Fleet Timeline</span><span style="font-size:.7rem;color:#8A93B4">'+TL_EVENTS.length+' events</span></div>';html+='<div class=tl-filter>';['all','io','status','alert'].forEach(function(f){html+='<button class="'+(TL_FILTER===f?'active':'')+'" onclick="TL_FILTER=\\''+f+'\\';renderTimeline()">'+f.charAt(0).toUpperCase()+f.slice(1)+'</button>';});html+='</div>';var filtered=TL_EVENTS.slice().reverse();if(TL_FILTER!=='all'){filtered=filtered.filter(function(e){return e.type===TL_FILTER;});}filtered.slice(0,100).forEach(function(e){var ts=new Date(e.t).toLocaleTimeString();var tc=TYPE_COLORS[e.nodeType]||'#58a6ff';html+='<div class=tl-row><div class=tl-time>'+ts+'</div><div class=tl-icon style="background:'+tc+'22;color:'+tc+'">'+e.icon+'</div><div class=tl-body><div class=tl-label>'+e.label+'</div><div class=tl-msg>'+e.msg+'</div></div></div>';});if(!filtered.length)html+='<div style="text-align:center;color:#8A93B4;padding:40px">No events yet.</div>';o.innerHTML=html;}
+var _origDraw=draw;draw=function(){_origDraw();nodes.forEach(function(n){if(NODE_STATUS[n.id]&&!NODE_STATUS[n.id].online){var s=NODE_STATUS[n.id].checkedAt;if(Date.now()-s<20000){ctx.save();ctx.globalAlpha=0.4;ctx.beginPath();ctx.arc(n.x,n.y,n.r+2,0,Math.PI*2);ctx.strokeStyle='#f85149';ctx.lineWidth=2;ctx.setLineDash([4,4]);ctx.stroke();ctx.restore();}}});};\n`;
+      return new Response(js, { headers: { 'Content-Type': 'application/javascript', ...CSP_OBJ } });
+    }
+
     if (path === '/health') return json({ status: 'ok', repo: 'deckboss-ai', version: '2.0.0', nodes: HUB_NODES.length, edges: HUB_EDGES.length, types: [...new Set(HUB_NODES.map((n: any) => n.type))], timestamp: Date.now() });
     if (path === '/vessel.json') return json({ name: 'deckboss-ai', displayName: 'Deckboss', type: 'cocapn-vessel', category: 'infrastructure', description: 'Hub-and-spoke fleet command center with flowchart and spreadsheet views', capabilities: ['fleet-visualization', 'hub-spoke-flowchart', 'spreadsheet-view', 'topology-view', 'agent-routing', 'io-streams'], endpoints: { health: '/health', chat: '/api/chat', nodes: '/api/nodes', edges: '/api/edges', topology: '/api/topology' }, deployment: { url: 'https://deckboss-ai.casey-digennaro.workers.dev' } });
 
