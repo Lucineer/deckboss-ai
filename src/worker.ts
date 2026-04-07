@@ -13,7 +13,7 @@ const TYPE_COLORS: Record<string,string> = {
   hub:'#f78166',agent:'#00d4ff',app:'#818cf8',meta:'#22c55e',infra:'#00E6D6',storage:'#64748b',
   model:'#58a6ff',sensor:'#4ade80',terminal:'#f59e0b',database:'#a78bfa',inbox:'#f472b6'
 };
-const CSP_OBJ = {'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://api.deepseek.com https://raw.githubusercontent.com https://*;"};
+const CSP_OBJ = {'X-Frame-Options': 'DENY', 'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://api.deepseek.com https://raw.githubusercontent.com https://*;"};
 
 function json(data: any, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', ...CSP_OBJ } });
