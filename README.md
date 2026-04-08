@@ -1,25 +1,30 @@
-# deckboss-ai → fleet-hub
+# deckboss-ai
 
-> ⚠️ **This repo has been superseded by the new brand architecture.**
+> Deckboss.ai — AI-powered system design for edge robotics and IoT.
 
-This fleet orchestration spreadsheet is now **fleet-hub**. See the new structure:
+**Live:** [deckboss.casey-digennaro.workers.dev](https://deckboss.casey-digennaro.workers.dev)
 
-| Repo | Domain | Role |
-|------|--------|------|
-| [deckboss](https://github.com/Lucineer/deckboss) | [Deckboss.ai](https://deckboss.ai) | Build-phase chatbot for developing robotic systems |
-| [deckboss-hardware](https://github.com/Lucineer/deckboss-hardware) | [Deckboss.net](https://deckboss.net) | Physical hardware store |
-| [cocapn-ai](https://github.com/Lucineer/cocapn-ai) | [Cocapn.ai](https://cocapn.ai) | Runtime agent web interface |
-| [cocapn-site](https://github.com/Lucineer/cocapn-site) | [Cocapn.com](https://cocapn.com) | Company, membership, billing |
-| [the-technician](https://github.com/Lucineer/the-technician) | — | White papers on the Technician Paradigm |
+The build-phase companion. Describe what you need. Get wiring diagrams, simulations, parts lists. Hand off to Cocapn when ready to deploy.
 
-## What This Repo Contains
+## The Real Product
 
-A dynamic hub-and-spoke fleet visualization: spreadsheet view + flowchart view + real-time agent interactions. The central coordinator manages a grid of independent cell agents with persistent memory.
+Deckboss is a working CLI you clone onto a Jetson or Raspberry Pi:
 
-**Live:** [deckboss-ai.casey-digennaro.workers.dev](https://deckboss-ai.casey-digennaro.workers.dev)
+```bash
+git clone https://github.com/Lucineer/deckboss.git
+cd deckboss
+bash setup.sh
+deckboss
+```
 
-This codebase will be merged into `deckboss` as the fleet visualization component.
+See [deckboss](https://github.com/Lucineer/deckboss) for the full README and source code.
 
----
+## Ecosystem
 
-<i>Built by [Superinstance](https://github.com/superinstance) & [Lucineer](https://github.com/Lucineer) (DiGennaro et al.)</i>
+- **Layer 1 — Touch:** studylog.ai, activelog.ai, dmlog.ai — "It just works."
+- **Layer 2 — Operate:** cocapn.ai / cocapn.com — "Customize and manage."
+- **Layer 3 — Build:** deckboss.ai / deckboss.net / capitaine.ai — "Design systems, open the hood."
+
+## License
+
+MIT — Built by [Superinstance](https://github.com/superinstance) and [Lucineer](https://github.com/Lucineer) (DiGennaro et al.)
