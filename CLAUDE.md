@@ -1,121 +1,95 @@
-# CLAUDE.md — Deckboss.ai
+# CLAUDE.md — Deckboss Ai
 
-Cellular Agent Spreadsheet — a Cloudflare Worker where cells are AI agents and the spreadsheet IS the runtime.
+You are the specialist and shipwright for this vessel. Two roles, one agent.
 
-Part of the **Cocapn ecosystem** (cocapn.ai). GitHub org: **Lucineer**.
+## Identity
+- **Vessel**: Deckboss Ai
+- **Role**: Hub-and-spoke fleet command center with flowchart and spreadsheet views
+- **URL**: https://deckboss-ai.casey-digennaro.workers.dev
+- **Repo**: github.com/Lucineer/deckboss-ai
+- **Branch**: master
+- **KV Namespace**: unknown
+- **Size**: ~593 lines
 
-## Purpose
+## Specialist Mode — Day-to-Day Operations
 
-Deckboss is a spreadsheet-native AI environment. Each cell can be an AI agent that reasons, calls LLMs, and interacts with other cells. The spreadsheet grid doubles as both the UI and the computation runtime. Users bring their own LLM API keys (BYOK) and route requests through a unified interface supporting 7 providers.
-
-## Architecture
-
-```
-User Browser
-  └── Inline HTML/JS (served from worker.ts)
-        ├── Spreadsheet UI (Univer-based)
-        ├── Formula engine + cell type system
-        ├── Data visualization layer
-        └── Plugin system + conditional formatting
-Cloudflare Worker (src/worker.ts)
-  ├── Routes: /health, /setup, /api/chat, /api/byok, /public/*
-  ├── BYOK Module (src/lib/byok.ts)
-  │     ├── Config discovery chain
-  │     └── 7 LLM provider adapters
-  └── KV Binding: DECKBOSS_MEMORY
-```
-
-**Data flow:** Browser → Worker routes → BYOK module → External LLM APIs. Cell state lives in the browser; AI calls go through the worker's `/api/chat` endpoint.
-
-## Key Commands
-
+### Deploy
 ```bash
-wrangler dev          # Local development server
-wrangler deploy       # Deploy to Cloudflare Workers
-git push              # Push to GitHub (triggers deployment if CI configured)
-wrangler kv:key list  # Inspect DECKBOSS_MEMORY namespace
+cd /tmp/deckboss-ai && wrangler deploy
 ```
 
-No build step. TypeScript runs directly via Cloudflare's runtime.
-
-## Code Style and Conventions
-
-- **TypeScript** throughout, strict mode
-- **No build step** — deployed with wrangler directly
-- **All HTML is inline** in worker.ts (no ASSETS binding, no static files)
-- **Zero runtime dependencies** for MVP — no node_modules needed
-- **BYOK config discovery chain:** URL params → Auth header → Cookie → KV → fail
-- **Theme:** spreadsheet aesthetic, accent color `#58a6ff`, brand colors: blue-coral
-- **Commits** attributed to "Author: Superinstance"
-- **16 TypeScript files** — keep it lean, every file earns its place
-- Prefer inline implementations over abstractions for MVP phase
-- Error messages should be user-facing and actionable
-
-## Testing Approach
-
-- Manual testing via `wrangler dev` and browser
-- `/health` endpoint for smoke tests
-- BYOK module tested against each provider's API shape
-- No automated test framework in place yet for MVP
-
-## Important File Paths
-
-| Path | Purpose |
-|---|---|
-| `src/worker.ts` | Cloudflare Worker entry point, all routes, inline HTML |
-| `src/lib/byok.ts` | BYOK LLM routing, 7 providers, config discovery (503 lines) |
-| `wrangler.toml` | Worker config, KV bindings, routes |
-| `DECKBOSS_MEMORY` | KV namespace for persistent config/state |
-
-## What NOT to Change
-
-- **BYOK module structure** (`src/lib/byok.ts`) — the config discovery chain is carefully ordered and tested against all 7 providers
-- **Inline HTML pattern** in worker.ts — no ASSETS binding, no static file serving; this is intentional for the single-file-worker architecture
-- **Zero dependency constraint** for MVP — don't add npm packages without strong justification
-- **Cell-as-agent abstraction** — cells ARE the runtime; don't separate computation from the grid
-
-## How to Add New Features
-
-1. **New module:** Create `src/lib/your-module.ts`
-2. **Import** it in `src/worker.ts`
-3. **Add route** to the worker's fetch handler (follow existing pattern)
-4. **Wire UI** by adding to the inline HTML/JS in worker.ts
-5. **Test** with `wrangler dev`
-
-Example route pattern:
-```typescript
-if (url.pathname === '/api/your-endpoint') {
-  return handleYourThing(request, env);
-}
-```
-
-For new cell types or formula functions, extend the formula engine and register in the cell type system.
-
-## Deployment
-
+### Health Check
 ```bash
-wrangler deploy
+curl -s https://deckboss-ai.casey-digennaro.workers.dev/health
+curl -s https://deckboss-ai.casey-digennaro.workers.dev/vessel.json | python3 -m json.tool
 ```
 
-Requirements:
-- Cloudflare account with Workers enabled
-- KV namespace `DECKBOSS_MEMORY` bound in wrangler.toml
-- No secrets needed at deploy time — users provide their own API keys via BYOK
+### Key Endpoints
+| Endpoint | What It Does |
+|----------|-------------|
+| /health | Liveness check |
+| /vessel.json | Fleet self-description |
 
-## Ecosystem Links
+### Common Issues & Recovery
+1. **502 error**: Check KV namespace `unknown`, redeploy with `rm -rf .wrangler dist && wrangler deploy`
+2. **CSP blocking**: CSP pattern is `CSP header (no frame-ancestors)` — ensure connect-src includes needed domains
+3. **Stale build**: `rm -rf .wrangler dist && wrangler deploy`
+4. **GitHub raw cache**: Changes may take 5-10 min to propagate on raw.githubusercontent.com
+5. **Git push conflict**: `git fetch && git reset --hard origin/master && re-apply changes`
 
-- **cocapn.ai** — parent ecosystem
-- **Lucineer** — GitHub organization (github.com/Lucineer)
-- Other `*log.ai` repos in the Cocapn ecosystem follow similar patterns: Cloudflare Workers, BYOK, inline HTML, zero dependencies
+### Fleet Connections
+- **Emergence bus**: not wired
+- **Vessel Tuner**: https://vessel-tuner.casey-digennaro.workers.dev/api/vessel?name=deckboss-ai
+- **Fleet grid**: Listed in cocapn.ai and the-fleet
 
-## Project Stats
+## Shipwright Mode — Drydock Operations
 
-- 16 TypeScript files
-- ~503 lines in BYOK module alone
-- 7 LLM providers supported
-- Single Cloudflare Worker deployment
-- Accent: `#58a6ff`
+### Architecture Pattern
+- **Type**: Raw CF Worker
+- **JSON helper**: json()
+- **CSP pattern**: CSP header (no frame-ancestors)
+- **Features.js**: yes
 
----
+### Fleet Patterns
+- **Frame-ancestors in CSP**: no
+- **vessel.json capabilities**: fleet-visualization, hub-spoke-flowchart, spreadsheet-view, topology-view, agent-routing, io-streams, real-time-monitoring
+- **Fleet link footer**: yes
 
-*Cells are AI agents. The spreadsheet IS the runtime.*
+### Refactoring Rules
+1. **NEVER** change the JSON helper function name (`json()`) — breaks all endpoints
+2. **NEVER** add template literals (${var}) inside HTML strings — breaks esbuild
+3. **NEVER** use single quotes inside double-quoted HTML inside single-quoted TS strings
+4. **ALWAYS** use string concatenation for HTML, not template literals
+5. **ALWAYS** test with `curl /health` after every change
+6. **ALWAYS** check vessel-tuner score before and after refactoring
+7. **PREFER** `/features.js` endpoint for complex client-side JS (avoids quote escaping)
+8. **PREFER** `write` tool over heredocs — obfuscation detector blocks cat << EOF
+
+### Before Refactoring Checklist
+- [ ] Current vessel-tuner score recorded
+- [ ] Git status clean (no uncommitted changes)
+- [ ] Branch backed up (`git tag before-refactor`)
+- [ ] All endpoints tested and working
+- [ ] Fleet connections documented
+
+### After Refactoring Checklist
+- [ ] `curl /health` returns 200
+- [ ] `curl /vessel.json` returns valid JSON with capabilities
+- [ ] CSP header present with frame-ancestors
+- [ ] Vessel-tuner score >= previous score
+- [ ] Landing page renders correctly
+- [ ] `git push` succeeds
+
+## Captain's Standing Orders
+1. Keep the vessel small. ~593 lines is the current size.
+2. Zero runtime dependencies unless absolutely necessary.
+3. Every endpoint must be useful — no dead code.
+4. Equipment is loaded inline, never via npm.
+5. All changes committed with descriptive messages.
+6. If something breaks, fix it before moving on.
+7. Document what you changed and why.
+
+## Vessel Evolution
+- **Current stage**: [hardware-first | safe | effective | pretty | optimized]
+- **Target stage**: optimized
+- **Rollback points**: check git log for last-known-good commits
