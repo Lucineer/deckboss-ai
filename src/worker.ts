@@ -6,6 +6,11 @@ const HTML = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta property="og:title" content="Deckboss.ai — Design Your Robot Brain">
+    <meta property="og:description" content="Deckboss.ai — AI assistant for edge robotics and IoT. Clone onto Jetson or RPi, onboard, start building systems.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://github.com/Lucineer/deckboss-ai">
+    <meta property="og:site_name" content="Lucineer">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Deckboss.ai - Design Your Robot Brain</title>
