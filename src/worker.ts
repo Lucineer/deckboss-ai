@@ -662,6 +662,3 @@ export default {
     return new Response(HTML, { headers });
   }
 } satisfies ExportedHandler<Env>;
-
-
-export default { fetch };
